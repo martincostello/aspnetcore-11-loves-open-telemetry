@@ -1,0 +1,80 @@
+@page "/login"
+@inject ApiClient Api
+@inject CookieAuthenticationStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in · Grot's Pizzeria</PageTitle>
+
+<PageHeader Title="Sign in" Subtitle="Welcome back." />
+
+<section class="panel narrow">
+    <div class="panel-body">
+        <EditForm Model="_form" OnValidSubmit="LoginAsync" FormName="login" aria-label="Sign in">
+            <label class="field">
+                <span>Username</span>
+                <InputText @bind-Value="_form.Username" id="username" name="username" type="text" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" aria-required="true" />
+            </label>
+            <label class="field">
+                <span>Password</span>
+                <InputText type="password" @bind-Value="_form.Password" id="password" name="password" autocomplete="current-password" aria-required="true" />
+            </label>
+
+            @if (_error is not null)
+            {
+                <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+            }
+
+            <button class="btn btn-primary" type="submit" disabled="@_submitting" aria-busy="@(_submitting ? "true" : "false")">Sign in</button>
+            <a class="btn btn-link" href="register">Create an account</a>
+        </EditForm>
+        <p class="muted hint">
+            <span>Demo account: <code>@DemoUsername</code> / <code>@DemoPassword</code></span>
+            <button class="btn btn-secondary btn-sm" type="button" @onclick="UseDemoAccount">Use demo account</button>
+        </p>
+    </div>
+</section>
+
+@code {
+    private const string DemoUsername = "grot";
+    private const string DemoPassword = "Grot!Pizza1";
+
+    private readonly LoginModel _form = new();
+    private ProblemResponse? _error;
+    private bool _submitting;
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private void UseDemoAccount()
+    {
+        _form.Username = DemoUsername;
+        _form.Password = DemoPassword;
+        _error = null;
+    }
+
+    private async Task LoginAsync()
+    {
+        _submitting = true;
+        _error = null;
+
+        var result = await Api.LoginAsync(new(_form.Username, _form.Password));
+        _submitting = false;
+
+        if (result.IsSuccess)
+        {
+            AuthState.Refresh();
+            Navigation.NavigateTo(string.IsNullOrEmpty(ReturnUrl) || ReturnUrl.Contains("://") ? "" : ReturnUrl);
+        }
+        else
+        {
+            _error = result.Problem;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

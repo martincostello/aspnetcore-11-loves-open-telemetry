@@ -1,0 +1,12 @@
+# Web framework
+fastapi==0.162.0
+uvicorn==0.54.0
+
+# Service-to-service JWT validation
+PyJWT==2.15.1
+
+# OpenTelemetry
+opentelemetry-distro==0.66b2
+opentelemetry-exporter-otlp==1.45.2
+opentelemetry-instrumentation-fastapi==0.66b2
+opentelemetry-processor-baggage==0.66b2

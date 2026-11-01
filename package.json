@@ -1,0 +1,23 @@
+{
+  "name": "grots-pizzeria-tooling",
+  "version": "1.0.0",
+  "description": "Development tooling for the repository",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "lint:css": "stylelint \"**/*.css\"",
+    "lint:md": "markdownlint-cli2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "markdownlint-cli2": "^0.24.0",
+    "stylelint": "^17.16.0",
+    "stylelint-config-standard": "^40.0.0"
+  }
+}

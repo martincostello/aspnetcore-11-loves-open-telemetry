@@ -1,0 +1,60 @@
+@page "/orders"
+@attribute [Authorize]
+@inject ApiClient Api
+
+<PageTitle>My orders · Grot's Pizzeria</PageTitle>
+
+<PageHeader Title="My orders" />
+
+@if (_error is not null)
+{
+    <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+}
+else if (_orders is null)
+{
+    <p class="muted" role="status">Loading your orders&hellip;</p>
+}
+else if (_orders.Count == 0)
+{
+    <section class="panel">
+        <div class="panel-body">
+            <p>You haven't ordered anything yet.</p>
+            <a class="btn btn-primary" href="menu">Browse the menu</a>
+        </div>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <table class="table">
+            <caption class="visually-hidden">Your orders, newest first</caption>
+            <thead>
+                <tr><th scope="col">Order</th><th scope="col">Placed</th><th scope="col">Items</th><th scope="col" class="num">Total</th><th scope="col">Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var order in _orders)
+                {
+                    <tr>
+                        <td><a href="orders/@order.Id" aria-label="View order @order.Id"><code>@order.Id</code></a></td>
+                        <td><LocalDateTime Value="order.CreatedAt" /></td>
+                        <td>@order.Items.Sum(i => i.Quantity)</td>
+                        <td class="num">@order.Total.Gbp()</td>
+                        <td><span class="tag tag-green">@order.Status</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+}
+
+@code {
+    private IReadOnlyList<Order>? _orders;
+    private ProblemResponse? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Api.GetOrdersAsync();
+        _orders = result.Value;
+        _error = result.Problem;
+    }
+}

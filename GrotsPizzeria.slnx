@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="docker-compose.yml" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GrotsPizzeria.EndToEndTests/GrotsPizzeria.EndToEndTests.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/GrotsPizzeria.AppHost/GrotsPizzeria.AppHost.csproj" />
+    <Project Path="src/GrotsPizzeria.Client/GrotsPizzeria.Client.csproj" />
+    <Project Path="src/GrotsPizzeria.Server/GrotsPizzeria.Server.csproj" />
+    <Project Path="src/GrotsPizzeria.Shared/GrotsPizzeria.Shared.csproj" />
+  </Folder>
+</Solution>

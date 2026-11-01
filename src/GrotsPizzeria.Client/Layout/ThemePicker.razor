@@ -1,0 +1,29 @@
+@inject ThemeService Theme
+
+<label class="theme-picker" title="Choose a theme">
+    <Icon Name="@(_current == "dark" ? "moon" : _current == "light" ? "sun" : "monitor")" />
+    <select aria-label="Theme" value="@_current" @onchange="OnChangedAsync">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+    </select>
+</label>
+
+@code {
+    private string _current = "system";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _current = await Theme.GetAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnChangedAsync(ChangeEventArgs e)
+    {
+        _current = e.Value?.ToString() ?? "system";
+        await Theme.SetAsync(_current);
+    }
+}

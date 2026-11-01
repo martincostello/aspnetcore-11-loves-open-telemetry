@@ -1,0 +1,51 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<button type="button" class="copy-button" title="Copy @Label" aria-label="Copy @Label" @onclick="CopyAsync">
+    <Icon Name="@(_copied ? "check" : "copy")" />
+</button>
+<span class="visually-hidden" role="status">@(_copied ? $"{Label} copied to the clipboard" : _failed ? $"Could not copy the {Label}" : "")</span>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private bool _copied;
+    private bool _failed;
+
+    /// <summary>The text to put on the clipboard.</summary>
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = "";
+
+    /// <summary>What is being copied, e.g. "order ID". Used for the tooltip and the accessible name.</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    private async Task CopyAsync()
+    {
+        try
+        {
+            _copied = await JS.InvokeAsync<bool>("grotsClipboard.copy", Text);
+            _failed = !_copied;
+        }
+        catch (JSException)
+        {
+            _copied = false;
+            _failed = true;
+        }
+
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        _copied = false;
+        _failed = false;
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

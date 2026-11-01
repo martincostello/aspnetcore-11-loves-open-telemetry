@@ -1,0 +1,105 @@
+@page "/menu"
+@implements IDisposable
+@inject MenuState State
+@inject CartState Cart
+
+<PageTitle>Menu · Grot's Pizzeria</PageTitle>
+
+<PageHeader Title="Menu" Subtitle="Everything is prepared to order. ✨" />
+
+@if (_error is not null)
+{
+    <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+}
+else if (_items is null)
+{
+    <p class="muted" role="status">Loading the menu&hellip;</p>
+}
+else
+{
+    @foreach (var (title, emoji, items) in Groups)
+    {
+    <section aria-labelledby="menu-@title.ToLowerInvariant()">
+    <h2 class="section-title" id="menu-@title.ToLowerInvariant()">@title <span class="section-emoji" aria-hidden="true">@emoji</span></h2>
+    <div class="grid grid-cards">
+        @foreach (var item in items)
+        {
+            <article class="panel pizza-card @(item.Offer is null ? "" : "on-offer")" aria-labelledby="item-@item.Id">
+                <div class="pizza-emoji" aria-hidden="true">@item.Emoji</div>
+                <div class="panel-body">
+                    <div class="pizza-title">
+                        <div class="pizza-heading">
+                            <h3 id="item-@item.Id">@item.Name</h3>
+                            @if (item.Offer is not null)
+                            {
+                                <span class="tag tag-offer">Special offer</span>
+                            }
+                        </div>
+                        @if (item.Popular || item.Vegetarian)
+                        {
+                            <span class="tags">
+                                @if (item.Popular)
+                                {
+                                    <span class="tag tag-yellow">Popular</span>
+                                }
+                                @if (item.Vegetarian)
+                                {
+                                    <span class="tag tag-green">Vegetarian</span>
+                                }
+                            </span>
+                        }
+                    </div>
+                    <p class="muted">@item.Description</p>
+                    <div class="pizza-footer">
+                        @if (item.Offer is { } offer)
+                        {
+                            <span class="price">
+                                <span class="visually-hidden">Special offer, @offer.PercentOff% off. Was @item.Price.Gbp(), now @offer.Price.Gbp()</span>
+                                <span aria-hidden="true">
+                                    <s class="was">@item.Price.Gbp()</s>
+                                    <strong class="now">@offer.Price.Gbp()</strong>
+                                    <span class="off">@offer.PercentOff% off</span>
+                                </span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="price"><span class="visually-hidden">Price: </span>@item.Price.Gbp()</span>
+                        }
+                        <button class="btn btn-primary btn-sm" type="button" @onclick="() => Cart.Add(item)">
+                            <span>Add to cart<span class="visually-hidden"> @item.Name</span>@(QuantityInCart(item) is > 0 and var q ? $" ({q} in cart)" : "")</span>
+                        </button>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+    </section>
+    }
+}
+
+@code {
+    private IReadOnlyList<MenuItem>? _items => State.Items;
+    private ProblemResponse? _error => State.Problem;
+
+    private IEnumerable<(string Title, string Emoji, IEnumerable<MenuItem> Items)> Groups =>
+        new[]
+        {
+            ("Pizzas", "🍕", _items!.Where(i => i.Category is not ("side" or "dessert"))),
+            ("Sides", "🍟", _items!.Where(i => i.Category == "side")),
+            ("Desserts", "🍨", _items!.Where(i => i.Category == "dessert")),
+        }.Where(g => g.Item3.Any());
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The special offers change every 5 minutes; the state reloads the menu then and lets us know
+        State.Changed += OnMenuChanged;
+        await State.LoadAsync();
+    }
+
+    private void OnMenuChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnMenuChanged;
+
+    private int QuantityInCart(MenuItem item) => Cart.Lines.FirstOrDefault(l => l.Item.Id == item.Id)?.Quantity ?? 0;
+}

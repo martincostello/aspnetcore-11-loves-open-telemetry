@@ -1,0 +1,8 @@
+# Grot's Pizzeria's own semantic conventions: the "grot.*" signals, layered on top of the OpenTelemetry ones.
+# `weaver registry live-check` uses this registry to judge the telemetry the applications really emit.
+name: grots_pizzeria
+description: Custom telemetry emitted by Grot's Pizzeria, on top of the OpenTelemetry semantic conventions.
+schema_url: https://grots-pizzeria.example/schemas/0.1.0
+dependencies:
+  - schema_url: https://opentelemetry.io/schemas/1.44.0
+    registry_path: https://github.com/open-telemetry/semantic-conventions@v1.44.0[model]

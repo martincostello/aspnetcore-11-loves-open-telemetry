@@ -1,0 +1,38 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: [ "http://*", "https://*" ]
+          allowed_headers: [ "*" ]
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    timeout: 1s
+
+exporters:
+  otlphttp/lgtm:
+    endpoint: http://lgtm:4318
+  otlp/weaver:
+    endpoint: weaver:4317
+    compression: none
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/lgtm, otlp/weaver]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/lgtm, otlp/weaver]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/lgtm, otlp/weaver]

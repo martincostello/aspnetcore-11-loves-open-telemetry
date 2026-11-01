@@ -1,0 +1,80 @@
+# grots-orders (Java)
+
+Order orchestration for Grot's Pizzeria. A Spring Boot 4 / Java 25 service that places an order by calling:
+
+1. **grots-menu** `POST /menu/price` – price the basket
+2. **grots-checkout** `POST /checkout` – take payment
+3. **grots-delivery** `POST /deliveries` – schedule the delivery
+
+Orders are held in memory. The API is described in [`docs/service-contract.md`](../../docs/service-contract.md).
+
+## Security
+
+Every endpoint except `GET /healthz` requires a JWT bearer token (HS256) minted by `grots-web`. The service validates
+the signature, `exp` (30 seconds of clock skew), `iss` and `aud` using Spring Security's OAuth2 resource server, and
+forwards the inbound `Authorization` header on its calls to menu, checkout and delivery.
+
+The service **refuses to start** unless `JWT_SIGNING_KEY` is at least 32 bytes. No key is baked into the image: always
+supply it at run time.
+
+## Running
+
+Only a JDK (21+) is needed. The Maven Wrapper downloads Maven on first use. These commands work in any shell on
+Windows, macOS and Linux (use `.\mvnw.cmd` in PowerShell/cmd on Windows if `./mvnw` isn't found).
+
+```sh
+export JWT_SIGNING_KEY="a-development-only-key-of-at-least-32-bytes"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"   # optional – any OTLP/HTTP endpoint, e.g. the LGTM container
+
+./mvnw spring-boot:run -Dspring-boot.run.jvmArguments="-javaagent:target/otel/opentelemetry-javaagent.jar"
+```
+
+(PowerShell: `$env:JWT_SIGNING_KEY = "..."`.) The build copies the OpenTelemetry Java agent to
+`target/otel/opentelemetry-javaagent.jar`, which is why the agent is available to `spring-boot:run`.
+Omit the `-javaagent` argument to run without telemetry.
+
+The Java agent has no setting for excluding URLs, so health checks (`GET /healthz`) are kept out of the traces by a small agent
+extension, [`otel/`](src/main/java/com/grotspizzeria/orders/otel), built as `target/app-health-check-sampler.jar`. The Docker image loads it
+with `OTEL_JAVAAGENT_EXTENSIONS` and selects its sampler with `OTEL_TRACES_SAMPLER=grots_parentbased_always_on` (the default sampler,
+minus health checks; `grots_always_on` records every trace, for debugging). To use it locally, add
+`-Dotel.javaagent.extensions=target/app-health-check-sampler.jar -Dotel.traces.sampler=grots_parentbased_always_on` to the agent
+arguments (run `./mvnw package` first).
+
+Docker (build context is this directory):
+
+```sh
+docker build -t grots-orders .
+docker run --rm -p 8082:8082 -e JWT_SIGNING_KEY="a-development-only-key-of-at-least-32-bytes" \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318 grots-orders
+```
+
+## Configuration
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `PORT` | `8082` | Listen port |
+| `MENU_URL` | `http://localhost:8081` | |
+| `CHECKOUT_URL` | `http://localhost:8083` | |
+| `DELIVERY_URL` | `http://localhost:8084` | |
+| `JWT_SIGNING_KEY` | _(required)_ | >= 32 bytes |
+| `JWT_ISSUER` | `grots-web` | |
+| `JWT_AUDIENCE` | `grots-pizzeria` | |
+| `OTEL_SERVICE_NAME` | `grots-orders` (image) | Standard OpenTelemetry variables |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(agent default)_ | Only this is needed to export logs, metrics and traces |
+
+## Telemetry
+
+Everything comes from the [OpenTelemetry Java agent](https://github.com/open-telemetry/opentelemetry-java-instrumentation)
+with no instrumentation code: HTTP server spans/metrics (Tomcat), HTTP client spans/metrics (JDK `HttpClient`), JVM runtime
+metrics and Logback log records correlated with the active trace. The agent already emits the stable HTTP semantic
+conventions, so `OTEL_SEMCONV_STABILITY_OPT_IN` is not needed.
+
+The only code that touches OpenTelemetry is `io.opentelemetry:opentelemetry-api`, used for the custom
+`grot.orders.placed` counter (`OrderMetrics`) and the `grot.order.id` attribute on the server span (`OrderService`).
+
+## Dependencies
+
+* `org.springframework.boot:spring-boot-starter-webmvc` (Spring Boot 4.1.2)
+* `org.springframework.boot:spring-boot-starter-security-oauth2-resource-server`
+* `io.opentelemetry:opentelemetry-api` (version managed by `opentelemetry-instrumentation-bom` 2.33.1)
+* `io.opentelemetry.javaagent:opentelemetry-javaagent` 2.33.1 (copied to `target/otel`, not on the classpath)

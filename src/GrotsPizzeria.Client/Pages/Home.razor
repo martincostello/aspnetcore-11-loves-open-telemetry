@@ -1,0 +1,40 @@
+@page "/"
+<PageTitle>Grot's Pizzeria</PageTitle>
+
+<section class="hero">
+    <img src="img/hero.jpg" alt="Grot, wearing a monitoring dashboard visor, sliding a pepperoni pizza into a wood-fired oven" />
+    <div class="hero-text">
+        <h1>Welcome to Grot's Pizzeria</h1>
+        <p>Hand-stretched dough, observable from oven to doorstep.</p>
+    </div>
+</section>
+
+<div class="grid grid-2">
+    <section class="panel">
+        <div class="panel-header"><h2>Hungry?</h2></div>
+        <div class="panel-body">
+            <p>Pick a pizza from the menu, add it to your cart and place your order. Then watch it go from the oven to your door.</p>
+            <p>
+                <a class="btn btn-primary" href="menu">See the menu</a>
+                <AuthorizeView>
+                    <Authorized><a class="btn btn-secondary" href="orders">My orders</a></Authorized>
+                    <NotAuthorized><a class="btn btn-secondary" href="login">Sign in</a></NotAuthorized>
+                </AuthorizeView>
+            </p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header"><h2>Behind the counter</h2></div>
+        <div class="panel-body">
+            <p>Every order passes through five services written in five languages. Each one reports logs, metrics and traces with OpenTelemetry.</p>
+            <ul class="service-list" aria-label="The services behind the counter">
+                <li><span class="tag lang"><img src="img/lang/dotnet.svg" alt=".NET" /></span> web &amp; accounts (the BFF serving this page)</li>
+                <li><span class="tag lang"><img src="img/lang/nodedotjs.svg" alt="" />Node.js</span> menu</li>
+                <li><span class="tag lang"><img src="img/lang/openjdk.svg" alt="" />Java</span> orders</li>
+                <li><span class="tag lang"><img src="img/lang/python.svg" alt="" />Python</span> checkout</li>
+                <li><span class="tag lang"><img src="img/lang/go.svg" alt="Go" /></span> delivery tracking</li>
+            </ul>
+        </div>
+    </section>
+</div>

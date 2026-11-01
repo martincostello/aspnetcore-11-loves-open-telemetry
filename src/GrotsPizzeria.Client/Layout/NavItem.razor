@@ -1,0 +1,38 @@
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<a class="nav-item @(IsActive ? "active" : "")" href="@Href" aria-current="@(IsActive ? "page" : null)">
+    <Icon Name="@IconName" /><span>@Label</span>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Href { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string IconName { get; set; } = "";
+
+    /// <summary>Only the exact URL is current (otherwise the URL and anything beneath it is).</summary>
+    [Parameter]
+    public bool Exact { get; set; }
+
+    private bool IsActive
+    {
+        get
+        {
+            var path = new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/');
+            var target = ("/" + Href).TrimEnd('/');
+            return Exact ? path == target : path == target || path.StartsWith(target + "/", StringComparison.Ordinal);
+        }
+    }
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

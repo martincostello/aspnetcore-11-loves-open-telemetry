@@ -1,0 +1,4 @@
+# Keep wrapper scripts runnable on every platform.
+mvnw text eol=lf
+mvnw.cmd text eol=crlf
+*.java text eol=lf

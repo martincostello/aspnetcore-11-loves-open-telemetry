@@ -1,0 +1,67 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<time datetime="@Value.UtcDateTime.ToString("O")" title="@_relative">@_text</time>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private string _text = "";
+    private string _relative = "";
+    private bool _ticking;
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset Value { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var iso = Value.UtcDateTime.ToString("O");
+
+        // Until the browser has formatted it (or if it cannot), show an unambiguous UTC timestamp.
+        _text = Value.UtcDateTime.ToString("u");
+        _text = await FormatAsync("grotsFormat.dateTime", iso, _text);
+        _relative = await FormatAsync("grotsFormat.relative", iso, "");
+
+        if (!_ticking)
+        {
+            _ticking = true;
+            _ = TickAsync(_cts.Token);
+        }
+    }
+
+    // The tooltip's relative time moves on every few seconds; a hover shows whatever it is at that moment.
+    private async Task TickAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                var relative = await FormatAsync("grotsFormat.relative", Value.UtcDateTime.ToString("O"), _relative);
+
+                if (relative != _relative)
+                {
+                    _relative = relative;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task<string> FormatAsync(string function, string iso, string fallback)
+    {
+        try
+        {
+            return await JS.InvokeAsync<string>(function, iso);
+        }
+        catch (JSException)
+        {
+            return fallback;
+        }
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

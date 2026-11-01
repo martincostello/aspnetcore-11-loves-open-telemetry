@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>GrotsPizzeria.EndToEndTests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Testing" />
+    <PackageReference Include="Deque.AxeCore.Playwright" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GrotsPizzeria.AppHost\GrotsPizzeria.AppHost.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Microsoft.Playwright" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>
