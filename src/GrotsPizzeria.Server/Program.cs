@@ -44,11 +44,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("grots-web"))
     .WithTracing(tracing => tracing
-        // The SDK's default sampler is parentbased_always_on; keep that (or always_on
-        // when debugging, see the AppHost), but never record health checks.
-        .SetSampler(builder.Configuration["OTEL_TRACES_SAMPLER"] == "always_on"
-            ? new HealthCheckSampler(new AlwaysOnSampler())
-            : new ParentBasedSampler(new HealthCheckSampler(new AlwaysOnSampler())))
+        .SetSampler(new HealthCheckSampler(ConfiguredSampler.Create(builder.Configuration)))
         .AddSource("Microsoft.AspNetCore")
         .AddSource("System.Net.Http")
         .AddProcessor<BaggageActivityProcessor>()

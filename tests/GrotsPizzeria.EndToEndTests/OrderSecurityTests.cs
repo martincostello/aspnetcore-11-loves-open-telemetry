@@ -143,7 +143,9 @@ public sealed class OrderSecurityTests(PizzeriaFixture fixture) : PizzeriaTest(f
         { "null items", """{"items":null}""" },
         { "no pizza id", """{"items":[{"quantity":1}]}""" },
         { "unknown item", Items(("not-on-the-menu", 1)) },
-        { "too many lines", Items(Enumerable.Repeat(("margherita", 1), 21).ToArray()) },
+        { "a null line", """{"items":[null]}""" },
+        { "a null line among others", """{"items":[{"pizzaId":"margherita","quantity":1},null]}""" },
+        { "too many lines", Items(Enumerable.Repeat(("margherita", 1), 51).ToArray()) },
     };
 
     [Theory]
@@ -163,6 +165,35 @@ public sealed class OrderSecurityTests(PizzeriaFixture fixture) : PizzeriaTest(f
             response.StatusCode == HttpStatusCode.BadRequest,
             $"{what}: expected 400 but got {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)}");
         Assert.Equal(before, await OrderIdsAsync(user));
+    }
+
+    [Fact]
+    public async Task Everything_On_The_Menu_Can_Be_Ordered_At_Once()
+    {
+        // The cart lets someone add every item on the menu, so the API has to take an order with a line for each
+        using var user = await NewUserAsync("all");
+        var menu = JsonNode.Parse(await user.GetStringAsync("/api/menu"))!.AsArray();
+        var items = menu.Select(i => ((string)i!["id"]!, 1)).ToArray();
+        Assert.True(items.Length > 20);
+
+        var id = await PlaceOrderAsync(user, items);
+
+        var order = JsonNode.Parse(await user.GetStringAsync($"/api/orders/{id}"))!;
+        Assert.Equal(items.Length, order["items"]!.AsArray().Count);
+    }
+
+    [Fact]
+    public async Task An_Address_Written_In_Any_Script_Can_Be_Delivered_To()
+    {
+        // The longest address the BFF takes is 200 characters, which is far more than 256 bytes in most scripts
+        using var user = await NewUserAsync("addr");
+        var order = Order();
+        order["address"] = new string('東', 200);
+
+        var response = await user.PostAsync("/api/orders", JsonBody(order));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Single(await OrderIdsAsync(user));
     }
 
     [Fact]

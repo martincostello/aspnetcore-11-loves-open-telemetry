@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Security.Claims;
 using GrotsPizzeria.Server.Downstream;
 using GrotsPizzeria.Shared;
@@ -38,14 +39,14 @@ internal static class PizzeriaEndpoints
         orders.MapGet("/{id}", async (string id, ClaimsPrincipal user, OrdersClient client, CancellationToken ct) =>
         {
             var result = await client.GetOrderAsync(id, ct);
-            return IsOwnedBy(result, user) ? result.ToHttpResult() : NotFound();
+            return Owned(result, user) ?? result.ToHttpResult();
         });
 
         orders.MapGet("/{id}/tracking", async (string id, ClaimsPrincipal user, OrdersClient orders, DeliveryClient delivery, CancellationToken ct) =>
         {
-            if (!IsOwnedBy(await orders.GetOrderAsync(id, ct), user))
+            if (Owned(await orders.GetOrderAsync(id, ct), user) is { } refused)
             {
-                return NotFound();
+                return refused;
             }
 
             Activity.Current?.SetTag("grot.order.id", id);
@@ -57,8 +58,15 @@ internal static class PizzeriaEndpoints
 
     private static string UserId(ClaimsPrincipal user) => user.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    private static bool IsOwnedBy(DownstreamResult<Order> result, ClaimsPrincipal user) =>
-        result.Value is { } order && order.UserId == UserId(user);
+    /// <summary>
+    /// Null if the order was found and is the user's. Otherwise the response to give: "not found" when there is no such order or it
+    /// is someone else's (the two look the same, so ids cannot be probed), and the downstream failure when the orders service
+    /// could not say (so an outage is not reported as the order not existing).
+    /// </summary>
+    private static IResult? Owned(DownstreamResult<Order> result, ClaimsPrincipal user) =>
+        result.Value is { } order
+            ? (order.UserId == UserId(user) ? null : NotFound())
+            : result.StatusCode == HttpStatusCode.NotFound ? NotFound() : result.ToHttpResult();
 
     private static IResult NotFound() =>
         Results.Json(new ProblemResponse("Order not found", StatusCodes.Status404NotFound), statusCode: StatusCodes.Status404NotFound);
@@ -71,9 +79,9 @@ internal static class PizzeriaEndpoints
         {
             detail = "A delivery address of up to 200 characters is required.";
         }
-        else if (request.Items is not { Count: >= 1 and <= 20 } || request.Items.Any(i => i.Quantity is < 1 or > 20 || string.IsNullOrWhiteSpace(i.PizzaId)))
+        else if (request.Items is not { Count: >= 1 and <= OrderLimits.MaxLines } || request.Items.Any(i => i is null || i.Quantity is < 1 or > OrderLimits.MaxQuantity || string.IsNullOrWhiteSpace(i.PizzaId)))
         {
-            detail = "Orders need between 1 and 20 lines, each with a quantity between 1 and 20.";
+            detail = $"Orders need between 1 and {OrderLimits.MaxLines} lines, each with a quantity between 1 and {OrderLimits.MaxQuantity}.";
         }
         else if (request.Payment is null || !PaymentMethods.Contains(request.Payment.Method))
         {

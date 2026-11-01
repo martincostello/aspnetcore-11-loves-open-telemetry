@@ -154,6 +154,22 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await Expect(Page.Locator("h1")).ToHaveTextAsync("Your cart");
     }
 
+    [Theory]
+    [InlineData("javascript:window.hijacked=true")]
+    [InlineData("//example.com/phish")]
+    [InlineData("https://example.com/phish")]
+    [InlineData(@"/\example.com/phish")]
+    [InlineData("http://[")]
+    public async Task Signing_In_Never_Goes_On_To_Anywhere_Outside_The_App(string returnTo)
+    {
+        await SignInAsync(returnTo: returnTo);
+
+        // They are signed in, and still in the app (at its home page), with nothing from the link having run
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
+        Assert.StartsWith(BaseAddress.ToString(), Page.Url);
+        Assert.Null(await Page.EvaluateAsync<bool?>("window.hijacked"));
+    }
+
     private static IPageAssertions Expect(IPage page) => Assertions.Expect(page);
 
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);

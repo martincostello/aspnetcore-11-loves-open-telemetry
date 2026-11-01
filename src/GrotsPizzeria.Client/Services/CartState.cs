@@ -25,7 +25,7 @@ public sealed class CartState
     public void Set(MenuItem item, int quantity)
     {
         var index = _lines.FindIndex(l => l.Item.Id == item.Id);
-        quantity = Math.Clamp(quantity, 0, 20);
+        quantity = Math.Clamp(quantity, 0, OrderLimits.MaxQuantity);
 
         if (quantity == 0)
         {

@@ -13,15 +13,32 @@ const { NodeSDK } = await import('@opentelemetry/sdk-node');
 const { getNodeAutoInstrumentations } = await import('@opentelemetry/auto-instrumentations-node');
 const { BaggageSpanProcessor } = await import('@opentelemetry/baggage-span-processor');
 const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-proto');
-const { BatchSpanProcessor } = await import('@opentelemetry/sdk-trace');
+const { BatchSpanProcessor, ConsoleSpanExporter, SimpleSpanProcessor } = await import('@opentelemetry/sdk-trace');
+
+// Copy the sample's own baggage (grot.*) onto every span so that it can be seen in the trace. Providing span processors
+// replaces the SDK's default ones, which the SDK chooses from OTEL_TRACES_EXPORTER, so that choice is made again here, the same way:
+// a comma-separated list, otlp if it is empty, and none (on its own) for no export at all. The exporters are otlp (configured from
+// OTEL_EXPORTER_OTLP_*, and always http/protobuf, the only protocol this service includes) and console; anything else is ignored.
+const spanProcessors = [new BaggageSpanProcessor((key) => key.startsWith('grot.'))];
+
+let exporters = [...new Set((process.env.OTEL_TRACES_EXPORTER ?? '').split(',').map((name) => name.trim().toLowerCase()))].filter(
+  (name) => name && name !== 'null',
+);
+
+if (exporters.length === 0 || (exporters.length > 1 && exporters.includes('none'))) {
+  exporters = ['otlp'];
+}
+
+for (const name of exporters) {
+  if (name === 'otlp') {
+    spanProcessors.push(new BatchSpanProcessor({ exporter: new OTLPTraceExporter() }));
+  } else if (name === 'console') {
+    spanProcessors.push(new SimpleSpanProcessor({ exporter: new ConsoleSpanExporter() }));
+  }
+}
 
 const sdk = new NodeSDK({
-  // Copy the sample's own baggage (grot.*) onto every span so that it can be seen in the trace. Providing span processors
-  // replaces the SDK's default one, so the OTLP exporter (configured from OTEL_EXPORTER_OTLP_*) is added back.
-  spanProcessors: [
-    new BaggageSpanProcessor((key) => key.startsWith('grot.')),
-    new BatchSpanProcessor({ exporter: new OTLPTraceExporter() }),
-  ],
+  spanProcessors,
   instrumentations: [
     getNodeAutoInstrumentations({
       // Express is instrumented by instrumentation-express, which also reports http.route on the

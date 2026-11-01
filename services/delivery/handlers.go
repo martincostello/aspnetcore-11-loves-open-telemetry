@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -13,6 +14,7 @@ import (
 )
 
 const maxBodyBytes = 1 << 20
+const maxAddressLength = 256
 
 type createRequest struct {
 	OrderID   string `json:"orderId"`
@@ -67,7 +69,7 @@ func createDelivery(store *Store) http.HandlerFunc {
 		case req.OrderID == "" || len(req.OrderID) > 64:
 			writeProblem(w, http.StatusBadRequest, "Invalid request", "orderId is required and must be at most 64 characters.")
 			return
-		case req.Address == "" || len(req.Address) > 256:
+		case req.Address == "" || utf8.RuneCountInString(req.Address) > maxAddressLength:
 			writeProblem(w, http.StatusBadRequest, "Invalid request", "address is required and must be at most 256 characters.")
 			return
 		case req.ItemCount < 1:

@@ -53,6 +53,23 @@
         _error = null;
     }
 
+    /// <summary>
+    /// Where to go once signed in: the page that asked for it, but only if that is somewhere in this application.
+    /// Anything else (another site, <c>//host/path</c>, <c>javascript:</c> and so on) goes to the home page instead.
+    /// </summary>
+    private string Destination()
+    {
+        if (string.IsNullOrEmpty(ReturnUrl))
+        {
+            return "";
+        }
+
+        return Uri.TryCreate(new Uri(Navigation.BaseUri), ReturnUrl, out var target) &&
+            target.AbsoluteUri.StartsWith(Navigation.BaseUri, StringComparison.Ordinal)
+            ? target.AbsoluteUri
+            : "";
+    }
+
     private async Task LoginAsync()
     {
         _submitting = true;
@@ -64,7 +81,7 @@
         if (result.IsSuccess)
         {
             AuthState.Refresh();
-            Navigation.NavigateTo(string.IsNullOrEmpty(ReturnUrl) || ReturnUrl.Contains("://") ? "" : ReturnUrl);
+            Navigation.NavigateTo(Destination());
         }
         else
         {

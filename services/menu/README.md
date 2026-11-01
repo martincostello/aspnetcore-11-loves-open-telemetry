@@ -45,6 +45,9 @@ Node.js runtime metrics; traces, metrics and logs are exported over OTLP using o
 environment variables. It defaults `OTEL_SERVICE_NAME` to `grots-menu` and `OTEL_SEMCONV_STABILITY_OPT_IN` to `http`
 (stable HTTP semantic conventions).
 
+`OTEL_TRACES_EXPORTER` chooses where traces go: `otlp` (the default, always over `http/protobuf`, the only OTLP protocol this
+service includes an exporter for), `console`, both (`otlp,console`) or `none`. Other values, such as `zipkin`, are ignored.
+
 * `src/logger.js` writes to stdout and emits OpenTelemetry log records (with trace context) via the logs API.
 * `grot.menu.price_quotes` is a custom counter incremented for every price quote.
 * Express is imported from an ES module, so `instrumentation.js` registers the OpenTelemetry ESM loader hook;
