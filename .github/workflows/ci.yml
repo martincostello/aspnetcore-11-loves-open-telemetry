@@ -27,7 +27,6 @@ jobs:
     permissions:
       contents: read
 
-
     strategy:
       fail-fast: false
       matrix:
@@ -291,6 +290,9 @@ jobs:
     name: End-to-end tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
