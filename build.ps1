@@ -156,7 +156,7 @@ $steps = [ordered]@{
 
     workflows  = {
         Assert-Docker
-        $image = Get-WorkflowImage 'rhysd/actionlint@sha256:[0-9a-f]{64}'
+        $image = Get-WorkflowImage 'rhysd/actionlint(:[0-9.]+)?@sha256:[0-9a-f]{64}'
         Invoke-Native docker @('run', '--rm', '--volume', "${root}:/repo", '--workdir', '/repo', $image)
     }
 
