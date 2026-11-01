@@ -89,13 +89,15 @@ public static class Telemetry
     }
 
     /// <summary>
-    /// A Blazor WebAssembly host does not run hosted services, which is how the SDK normally starts
-    /// itself, so create the providers explicitly (this is what starts the exporters).
+    /// A Blazor WebAssembly host does not run hosted services, which is how the SDK normally starts itself,
+    /// so ask the SDK to do what its hosted service would have done (this is what starts the exporters).
     /// </summary>
     public static WebAssemblyHost StartTelemetry(this WebAssemblyHost host)
     {
-        _tracerProvider = host.Services.GetRequiredService<TracerProvider>();
-        _meterProvider = host.Services.GetRequiredService<MeterProvider>();
+        host.Services.GetRequiredService<ITelemetryHostInitializer>().Initialize();
+
+        _tracerProvider = host.Services.GetService<TracerProvider>();
+        _meterProvider = host.Services.GetService<MeterProvider>();
         _loggerProvider = host.Services.GetService<LoggerProvider>();
 
         // Flush when the page is hidden or unloaded (wwwroot/js/telemetry.js)
