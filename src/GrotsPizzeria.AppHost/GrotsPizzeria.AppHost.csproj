@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Aspire.AppHost.Sdk" />
+  <PropertyGroup>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>GrotsPizzeria.AppHost</RootNamespace>
+    <UserSecretsId>grots-pizzeria-apphost</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GrotsPizzeria.Server\GrotsPizzeria.Server.csproj" />
+  </ItemGroup>
+</Project>

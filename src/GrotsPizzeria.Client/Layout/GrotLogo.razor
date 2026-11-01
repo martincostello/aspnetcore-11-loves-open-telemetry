@@ -1,0 +1,9 @@
+<span class="grot-logo" style="--grot-size: @(Size)px" aria-hidden="true">
+    <img src="img/grot.svg" width="@Size" height="@Size" alt="" />
+    <span class="grot-pizza" aria-hidden="true">🍕</span>
+</span>
+
+@code {
+    [Parameter]
+    public int Size { get; set; } = 32;
+}

@@ -1,0 +1,147 @@
+@page "/orders/{Id}"
+@attribute [Authorize]
+@implements IDisposable
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<PageTitle>Order @Id · Grot's Pizzeria</PageTitle>
+
+<PageHeader Title="@($"Order {Id}")" Subtitle="Thanks! Here is where things stand.">
+    <TitleContent>Order <code class="order-id">@Id</code></TitleContent>
+    <Actions><CopyButton Text="@Id" Label="order ID" /></Actions>
+</PageHeader>
+
+@if (_error is not null)
+{
+    <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+}
+else if (_order is null)
+{
+    <p class="muted" role="status">Loading your order&hellip;</p>
+}
+else
+{
+    <div class="grid grid-2">
+        <section class="panel">
+            <div class="panel-header"><h2>Delivery tracking</h2></div>
+            <div class="panel-body">
+                @if (_tracking is null)
+                {
+                    <p class="muted" role="status">Waiting for the kitchen&hellip;</p>
+                }
+                else
+                {
+                    <ol class="steps" data-testid="delivery-steps" aria-label="Delivery progress">
+                        @foreach (var step in _tracking.Steps)
+                        {
+                            <TrackingStepItem @key="step.Status" Step="step" Current="@(step.Status == _tracking.Status)" Final="@(step == _tracking.Steps[^1])" />
+                        }
+                    </ol>
+                    <div role="status" aria-live="polite">
+                        @if (_tracking.Status != "delivered")
+                        {
+                            <p class="muted">@_tracking.Driver is on the job · about @_tracking.EtaMinutes min to go.</p>
+                        }
+                        else
+                        {
+                            <p><strong>Delivered. Enjoy!</strong></p>
+                        }
+                        <span class="visually-hidden">Current status: @CurrentLabel</span>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h2>Receipt</h2></div>
+            <table class="table">
+                <caption class="visually-hidden">Receipt for order @_order.Id</caption>
+                <tbody>
+                    @foreach (var line in _order.Items)
+                    {
+                        <tr><td>@line.Quantity × @line.Name</td><td class="num">@line.LineTotal.Gbp()</td></tr>
+                    }
+                </tbody>
+                <tfoot data-testid="totals">
+                    <tr><td>Subtotal</td><td class="num">@_order.Subtotal.Gbp()</td></tr>
+                    <tr><td>Tax (@_taxRate)</td><td class="num">@_order.Tax.Gbp()</td></tr>
+                    <tr><td><strong>Total</strong></td><td class="num"><strong>@_order.Total.Gbp()</strong></td></tr>
+                </tfoot>
+            </table>
+            <div class="panel-body muted">
+                Delivering to @_order.Address<br />
+                Transaction <code>@_order.TransactionId</code> <CopyButton Text="@_order.TransactionId" Label="transaction ID" />
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private Order? _order;
+    private Tracking? _tracking;
+    private ProblemResponse? _error;
+    private string _taxRate = "";
+
+    [Parameter]
+    public string Id { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Api.GetOrderAsync(Id);
+        _order = result.Value;
+        _error = result.Problem;
+
+        if (_order is not null)
+        {
+            _taxRate = await FormatPercentAsync(_order.TaxRate);
+            _ = PollTrackingAsync(_cts.Token);
+        }
+    }
+
+    private async Task PollTrackingAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+
+        do
+        {
+            var result = await Api.GetTrackingAsync(Id);
+            _tracking = result.Value ?? _tracking;
+            await InvokeAsync(StateHasChanged);
+
+            if (_tracking?.Status == "delivered")
+            {
+                return;
+            }
+        }
+        while (await WaitAsync(timer, cancellationToken));
+    }
+
+    private static async Task<bool> WaitAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await timer.WaitForNextTickAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    private string CurrentLabel => _tracking?.Steps.FirstOrDefault(s => s.Status == _tracking.Status)?.Label ?? _tracking?.Status ?? "";
+
+    private async Task<string> FormatPercentAsync(decimal fraction)
+    {
+        try
+        {
+            return await JS.InvokeAsync<string>("grotsFormat.percent", fraction);
+        }
+        catch (JSException)
+        {
+            return $"{fraction * 100:0.##}%";
+        }
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

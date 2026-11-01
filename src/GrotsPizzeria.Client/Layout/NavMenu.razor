@@ -1,0 +1,25 @@
+@inject ApiClient Api
+
+<ul class="nav-list">
+    <li><NavItem Href="" Label="Home" IconName="home" Exact="true" /></li>
+    <li><NavItem Href="menu" Label="Menu" IconName="menu" /></li>
+    <li><NavItem Href="cart" Label="Cart" IconName="cart" /></li>
+    <li><NavItem Href="orders" Label="My orders" IconName="orders" /></li>
+
+    @if (_telemetryUrl is not null)
+    {
+        <li class="nav-divider" aria-hidden="true"></li>
+        <li>
+            <a class="nav-item" href="@_telemetryUrl" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="See telemetry (opens in a new tab)">
+                <Icon Name="telemetry" /><span>See telemetry</span><span class="nav-external" aria-hidden="true"><Icon Name="external" /></span>
+            </a>
+        </li>
+    }
+</ul>
+
+@code {
+    private string? _telemetryUrl;
+
+    protected override async Task OnInitializedAsync() =>
+        _telemetryUrl = (await Api.GetConfigAsync()).Value?.TelemetryUrl;
+}

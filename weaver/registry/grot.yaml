@@ -1,0 +1,178 @@
+groups:
+  # Attributes
+  - id: registry.grot
+    type: attribute_group
+    stability: stable
+    brief: Attributes describing Grot's Pizzeria business operations.
+    attributes:
+      - id: grot.order.id
+        type: string
+        stability: stable
+        brief: The identifier of the order being processed.
+        examples: ["ord_3f9c2a71b0d4"]
+      - id: grot.order.outcome
+        type:
+          members:
+            - id: placed
+              value: placed
+              stability: stable
+              brief: The order was accepted, paid for and scheduled for delivery.
+            - id: rejected
+              value: rejected
+              stability: stable
+              brief: The order was refused, e.g. an unknown pizza or a declined payment.
+            - id: failed
+              value: failed
+              stability: stable
+              brief: The order could not be completed because a downstream service failed.
+        stability: stable
+        brief: What happened to an order.
+      - id: grot.payment.method
+        type:
+          members:
+            - id: card
+              value: card
+              stability: stable
+              brief: Paid by card.
+            - id: cash
+              value: cash
+              stability: stable
+              brief: Paid in cash on delivery.
+        stability: stable
+        brief: How the customer paid.
+      - id: grot.payment.outcome
+        type:
+          members:
+            - id: approved
+              value: approved
+              stability: stable
+              brief: The payment was approved.
+            - id: declined
+              value: declined
+              stability: stable
+              brief: The payment was declined.
+            - id: error
+              value: error
+              stability: stable
+              brief: The payment gateway failed.
+        stability: stable
+        brief: What happened to a payment.
+      - id: grot.auth.operation
+        type:
+          members:
+            - id: login
+              value: login
+              stability: stable
+              brief: A login attempt.
+            - id: register
+              value: register
+              stability: stable
+              brief: A registration attempt.
+        stability: stable
+        brief: The authentication operation attempted.
+      - id: grot.auth.outcome
+        type:
+          members:
+            - id: success
+              value: success
+              stability: stable
+              brief: The attempt succeeded.
+            - id: failure
+              value: failure
+              stability: stable
+              brief: The attempt failed.
+        stability: stable
+        brief: Whether an authentication attempt succeeded.
+      - id: grot.delivery.driver
+        type: string
+        stability: stable
+        brief: The name of the driver a delivery was assigned to.
+        examples: ["Prom Pete"]
+      - id: grot.delivery.item_count
+        type: int
+        stability: stable
+        brief: The number of items in a delivery.
+        examples: [3]
+      - id: grot.auth.locked_out
+        type: boolean
+        stability: stable
+        brief: Whether the account was locked out after a failed login attempt.
+      - id: grot.ui.action
+        type: string
+        stability: stable
+        brief: What the user did in the UI that started a trace; carried as baggage through every service.
+        examples: ["place-order"]
+      - id: grot.pizza.id
+        type: string
+        stability: stable
+        brief: The identifier of a pizza on the menu.
+        examples: ["margherita", "grot-special"]
+      - id: grot.quote.lines
+        type: int
+        stability: stable
+        brief: The number of lines in a price quote.
+        examples: [2, 3]
+      - id: grot.quote.subtotal
+        type: double
+        stability: stable
+        brief: The subtotal of a price quote, in GBP.
+        examples: [33.0]
+      - id: grot.auth.failure
+        type: string
+        stability: stable
+        brief: Why a service-to-service JWT was rejected.
+        examples: ["ERR_JWT_EXPIRED", "ERR_JWS_SIGNATURE_VERIFICATION_FAILED"]
+
+  # Metrics
+  - id: metric.grot.menu.price_quotes
+    type: metric
+    metric_name: grot.menu.price_quotes
+    stability: stable
+    brief: The number of price quotes produced by the menu service.
+    instrument: counter
+    unit: "{quote}"
+
+  - id: metric.grot.orders.placed
+    type: metric
+    metric_name: grot.orders.placed
+    stability: stable
+    brief: The number of orders processed by the orders service.
+    instrument: counter
+    unit: "{order}"
+    attributes:
+      - ref: grot.order.outcome
+        requirement_level: required
+
+  - id: metric.grot.checkout.payments
+    type: metric
+    metric_name: grot.checkout.payments
+    stability: stable
+    brief: The number of payments processed by the checkout service.
+    instrument: counter
+    unit: "{payment}"
+    attributes:
+      - ref: grot.payment.method
+        requirement_level: required
+      - ref: grot.payment.outcome
+        requirement_level: required
+
+  - id: metric.grot.deliveries.active
+    type: metric
+    metric_name: grot.deliveries.active
+    stability: stable
+    brief: The number of deliveries that have been scheduled but not yet delivered.
+    instrument: updowncounter
+    unit: "{delivery}"
+
+  - id: metric.grot.auth.attempts
+    type: metric
+    metric_name: grot.auth.attempts
+    stability: stable
+    brief: The number of login and registration attempts handled by the web application.
+    instrument: counter
+    unit: "{attempt}"
+    attributes:
+      - ref: grot.auth.operation
+        requirement_level: required
+      - ref: grot.auth.outcome
+        requirement_level: required

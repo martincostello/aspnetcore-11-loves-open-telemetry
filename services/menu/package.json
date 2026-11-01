@@ -1,0 +1,26 @@
+{
+  "name": "grots-menu",
+  "version": "1.0.0",
+  "description": "Grot's Pizzeria menu service",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node --import ./instrumentation.js src/server.js",
+    "dev": "node --watch --import ./instrumentation.js src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.82.0",
+    "@opentelemetry/baggage-span-processor": "^0.6.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.300.0",
+    "@opentelemetry/instrumentation": "^0.300.0",
+    "@opentelemetry/sdk-node": "^0.300.0",
+    "@opentelemetry/sdk-trace": "^3.0.0",
+    "express": "^5.3.0",
+    "jose": "^6.2.14"
+  }
+}

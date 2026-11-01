@@ -1,0 +1,217 @@
+@page "/cart"
+@attribute [Authorize]
+@implements IDisposable
+@inject CartState Cart
+@inject ApiClient Api
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using System.Diagnostics
+
+<PageTitle>Cart · Grot's Pizzeria</PageTitle>
+
+<PageHeader Title="Your cart" Subtitle="Review your order and tell us where to bring it." />
+
+<div class="visually-hidden" role="status">@_status</div>
+
+@if (Cart.Lines.Count == 0)
+{
+    <section class="panel">
+        <div class="panel-body">
+            <p>Your cart is empty.</p>
+            <a class="btn btn-primary" id="browse-menu" href="menu">Browse the menu</a>
+        </div>
+    </section>
+}
+else
+{
+    <div class="grid grid-2">
+        <section class="panel">
+            <div class="panel-header"><h2>Items</h2></div>
+            <table class="table cart-table">
+                <caption class="visually-hidden">Items in your cart</caption>
+                <thead class="visually-hidden">
+                    <tr><th scope="col">Item</th><th scope="col">Quantity</th><th scope="col">Price</th><th scope="col">Remove</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Cart.Lines)
+                    {
+                        <tr data-testid="cart-line">
+                            <td>
+                                <span aria-hidden="true">@line.Item.Emoji</span> @line.Item.Name
+                                @if (line.Item.Offer is not null)
+                                {
+                                    <span class="tag tag-offer" data-testid="special-offer">Special offer</span>
+                                }
+                            </td>
+                            <td class="qty">
+                                <button class="btn btn-secondary btn-sm" type="button" aria-label="Remove one @line.Item.Name" @onclick="() => Cart.Set(line.Item, line.Quantity - 1)"><span aria-hidden="true">−</span></button>
+                                <span role="img" aria-label="Quantity: @line.Quantity">@line.Quantity</span>
+                                <button class="btn btn-secondary btn-sm" type="button" aria-label="Add one more @line.Item.Name" @onclick="() => Cart.Set(line.Item, line.Quantity + 1)"><span aria-hidden="true">+</span></button>
+                            </td>
+                            <td class="num">@line.Total.Gbp()</td>
+                            <td class="actions">
+                                <button class="btn btn-secondary btn-sm btn-icon" type="button" id="remove-@line.Item.Id" title="Remove @line.Item.Name from the cart"
+                                        aria-label="Remove all @line.Item.Name from your cart" @onclick="() => RemoveAll(line)">
+                                    <Icon Name="trash" />
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot data-testid="totals">
+                    <tr><td colspan="2">Subtotal (tax is added at checkout)</td><td class="num"><strong>@Cart.Subtotal.Gbp()</strong></td><td></td></tr>
+                </tfoot>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h2 id="delivery-heading">Delivery &amp; payment</h2></div>
+            <div class="panel-body">
+                <EditForm Model="_form" OnValidSubmit="PlaceOrderAsync" FormName="checkout" aria-labelledby="delivery-heading">
+                    <DataAnnotationsValidator />
+
+                    <label class="field">
+                        <span>Delivery address</span>
+                        <InputText @ref="_address" @bind-Value="_form.Address" placeholder="1 Loki Lane, Tempo Town" autocomplete="street-address" data-1p-ignore aria-required="true" aria-describedby="address-error" />
+                        <ValidationMessage For="() => _form.Address" id="address-error" role="alert" data-testid="validation-message" />
+                    </label>
+
+                    <label class="field">
+                        <span>Payment method</span>
+                        <InputSelect @bind-Value="_form.Method">
+                            <option value="card">Card</option>
+                            <option value="cash">Cash on delivery</option>
+                        </InputSelect>
+                    </label>
+
+                    @if (_form.Method == "card")
+                    {
+                        <label class="field">
+                            <span>Last 4 digits of your card</span>
+                            <InputText @bind-Value="_form.CardLast4" maxlength="4" inputmode="numeric" autocomplete="off" data-1p-ignore aria-required="true" aria-describedby="card-hint card-error" />
+                            <ValidationMessage For="() => _form.CardLast4" id="card-error" role="alert" data-testid="validation-message" />
+                            <small class="muted" id="card-hint">Tip: a card ending in <code>0000</code> is always declined.</small>
+                        </label>
+                    }
+
+                    @if (_error is not null)
+                    {
+                        <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+                    }
+
+                    <button class="btn btn-primary" type="submit" disabled="@_submitting" aria-busy="@(_submitting ? "true" : "false")">
+                        @(_submitting ? "Placing order&hellip;" : $"Place order · {Cart.Subtotal.Gbp()}")
+                    </button>
+                </EditForm>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly CheckoutForm _form = new();
+    private InputText? _address;
+    private bool _focused;
+    private string? _status;
+    private string? _focusAfterRender;
+    private ProblemResponse? _error;
+    private bool _submitting;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The button the user pressed went with its row: put the focus on the next one (or the one before, or the way back to the menu)
+        if (_focusAfterRender is { } id)
+        {
+            _focusAfterRender = null;
+
+            try
+            {
+                await JS.InvokeVoidAsync("grotsFocus.byId", id);
+            }
+            catch (JSException)
+            {
+                // Moving the focus is a nicety; carry on without it
+            }
+        }
+
+        if (!_focused && _address?.Element is { } address)
+        {
+            _focused = true;
+            await Task.Yield();
+            await address.FocusAsync();
+        }
+    }
+
+    // The prices in the cart change when the special offers do (see MenuState)
+    protected override void OnInitialized() => Cart.Changed += OnCartChanged;
+
+    private void OnCartChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Cart.Changed -= OnCartChanged;
+
+    // Takes every one of the item out of the cart, however many there are
+    private void RemoveAll(CartLine line)
+    {
+        var lines = Cart.Lines;
+        var index = -1;
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].Item.Id == line.Item.Id)
+            {
+                index = i;
+            }
+        }
+
+        var neighbour = index + 1 < lines.Count ? lines[index + 1] : index > 0 ? lines[index - 1] : null;
+
+        Cart.Set(line.Item, 0);
+        _status = $"Removed {line.Quantity} × {line.Item.Name} from your cart.";
+        _focusAfterRender = neighbour is null ? "browse-menu" : $"remove-{neighbour.Item.Id}";
+    }
+
+    private async Task PlaceOrderAsync()
+    {
+        _submitting = true;
+        _error = null;
+
+        var request = new PlaceOrderRequest(
+            _form.Address,
+            [.. Cart.Lines.Select(l => new OrderLineRequest(l.Item.Id, l.Quantity))],
+            new PaymentRequest(_form.Method, _form.Method == "card" ? _form.CardLast4 : null));
+
+        using var activity = Telemetry.Source.StartActivity("place order");
+        activity?.SetTag("grot.payment.method", _form.Method);
+
+        // Baggage travels with every request made inside this span, through every service, as the W3C "baggage" header
+        activity?.SetTag("grot.ui.action", "place-order");
+        activity?.AddBaggage("grot.ui.action", "place-order");
+
+        var result = await Api.PlaceOrderAsync(request);
+        _submitting = false;
+
+        if (result.Value is { } order)
+        {
+            activity?.SetTag("grot.order.id", order.Id);
+            Cart.Clear();
+            Navigation.NavigateTo($"orders/{order.Id}");
+        }
+        else
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, result.Problem?.Title);
+            _error = result.Problem;
+        }
+    }
+
+    private sealed class CheckoutForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Where should we send it?")]
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string Address { get; set; } = "";
+
+        public string Method { get; set; } = "card";
+
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}$", ErrorMessage = "Enter exactly 4 digits.")]
+        public string? CardLast4 { get; set; } = "4242";
+    }
+}

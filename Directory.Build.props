@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <LangVersion>latest</LangVersion>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <MSBuildTreatWarningsAsErrors Condition=" '$(CI)' == 'true' ">true</MSBuildTreatWarningsAsErrors>
+    <NuGetAudit>true</NuGetAudit>
+    <Nullable>enable</Nullable>
+    <TargetFramework>net11.0</TargetFramework>
+    <TreatWarningsAsErrors Condition=" '$(CI)' == 'true' ">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,26 @@
+<div class="page-header">
+    <div class="page-header-title">
+        <h1 data-testid="page-title">@(TitleContent ?? (RenderFragment)(b => b.AddContent(0, Title)))</h1>
+        @Actions
+    </div>
+    @if (!string.IsNullOrEmpty(Subtitle))
+    {
+        <p class="muted">@Subtitle</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    /// <summary>Rich content for the heading (for example text with a monospaced ID in it). Replaces <see cref="Title"/> when set.</summary>
+    [Parameter]
+    public RenderFragment? TitleContent { get; set; }
+
+    /// <summary>Small controls shown next to the title, such as a copy button.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+}

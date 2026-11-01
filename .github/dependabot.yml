@@ -1,0 +1,105 @@
+version: 2
+
+updates:
+
+  - package-ecosystem: docker
+    directories:
+      - /services/checkout
+      - /services/delivery
+      - /services/menu
+      - /services/orders
+      - /src/GrotsPizzeria.Server
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: [ "*" ]
+
+  - package-ecosystem: gomod
+    directory: /services/delivery
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      opentelemetry:
+        patterns: [ "go.opentelemetry.io/*" ]
+
+  - package-ecosystem: maven
+    directory: /services/orders
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      opentelemetry:
+        patterns: [ "io.opentelemetry*" ]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      eslint:
+        patterns: [ "eslint", "@eslint/*", "globals" ]
+
+  - package-ecosystem: npm
+    directory: /services/menu
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      opentelemetry:
+        patterns: [ "@opentelemetry/*" ]
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      aspire:
+        patterns: [ "Aspire.*" ]
+      dotnet:
+        patterns: [ "Microsoft.*", "System.*" ]
+      opentelemetry:
+        patterns: [ "OpenTelemetry*" ]
+
+  - package-ecosystem: pip
+    directory: /services/checkout
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      opentelemetry:
+        patterns: [ "opentelemetry-*" ]

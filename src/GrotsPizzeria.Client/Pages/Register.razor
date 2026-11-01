@@ -1,0 +1,69 @@
+@page "/register"
+@inject ApiClient Api
+@inject CookieAuthenticationStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Create account · Grot's Pizzeria</PageTitle>
+
+<PageHeader Title="Create an account" Subtitle="Passwords need 8+ characters with upper and lower case, a digit and a symbol." />
+
+<section class="panel narrow">
+    <div class="panel-body">
+        <EditForm Model="_form" OnValidSubmit="RegisterAsync" FormName="register" aria-label="Create an account">
+            <label class="field">
+                <span>Username</span>
+                <InputText @bind-Value="_form.Username" id="username" name="username" type="text" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" aria-required="true" aria-describedby="username-hint" />
+                <small class="muted" id="username-hint">3-32 letters, numbers, dots, dashes or underscores.</small>
+            </label>
+            <label class="field">
+                <span>Display name</span>
+                <InputText @bind-Value="_form.DisplayName" id="display-name" name="displayName" autocomplete="nickname" />
+            </label>
+            <label class="field">
+                <span>Password</span>
+                <InputText type="password" @bind-Value="_form.Password" id="password" name="password" autocomplete="new-password" passwordrules="minlength: 8; required: lower; required: upper; required: digit; required: special;" aria-required="true" aria-describedby="password-hint" />
+                <small class="muted" id="password-hint">At least 8 characters, with upper and lower case, a digit and a symbol.</small>
+            </label>
+
+            @if (_error is not null)
+            {
+                <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+            }
+
+            <button class="btn btn-primary" type="submit" disabled="@_submitting" aria-busy="@(_submitting ? "true" : "false")">Create account</button>
+            <a class="btn btn-link" href="login">I already have one</a>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly RegisterModel _form = new();
+    private ProblemResponse? _error;
+    private bool _submitting;
+
+    private async Task RegisterAsync()
+    {
+        _submitting = true;
+        _error = null;
+
+        var result = await Api.RegisterAsync(new(_form.Username, _form.DisplayName, _form.Password));
+        _submitting = false;
+
+        if (result.IsSuccess)
+        {
+            AuthState.Refresh();
+            Navigation.NavigateTo("menu");
+        }
+        else
+        {
+            _error = result.Problem;
+        }
+    }
+
+    private sealed class RegisterModel
+    {
+        public string Username { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

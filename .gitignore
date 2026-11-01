@@ -426,3 +426,33 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Local SQLite databases (Identity) and data protection keys
+*.db
+*.db-shm
+*.db-wal
+
+# Weaver live-check reports
+weaver/reports/
+
+# Node.js
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Java / Maven
+target/
+
+# Go
+*.test
+*.exe
+
+# Playwright
+playwright-report/
+test-results/

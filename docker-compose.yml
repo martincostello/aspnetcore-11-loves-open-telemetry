@@ -1,0 +1,152 @@
+# Grot's Pizzeria: the whole stack, plus Grafana (LGTM) to look at its telemetry.
+#
+#   docker compose up --build --wait
+#
+# Every container has a health check, and the dependencies are chained so
+# that the pizzeria itself (web) is the last thing to become healthy:
+#
+#   lgtm -> menu, checkout, delivery -> orders -> web
+#
+# `--wait` returns only once everything is healthy, i.e. the whole stack is ready to serve.
+#
+#   Pizzeria  http://localhost:8080
+#   Grafana   http://localhost:3000 (admin / admin)
+#
+# Telemetry goes to the LGTM container over OTLP. To send it somewhere else instead set
+# OTEL_EXPORTER_OTLP_ENDPOINT (and OTEL_EXPORTER_OTLP_HEADERS) in your shell or a .env file.
+# To also validate it with OpenTelemetry Weaver, see docker-compose.weaver.yml.
+
+name: grots-pizzeria
+
+x-telemetry: &telemetry
+  # All of the OpenTelemetry configuration the applications need: where to send OTLP, and how.
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4318}
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  # W3C trace context (traceparent, tracestate: which carry the sampling decision) and baggage, between all the applications
+  OTEL_PROPAGATORS: tracecontext,baggage
+  OTEL_METRIC_EXPORT_INTERVAL: "15000"
+  OTEL_RESOURCE_ATTRIBUTES: service.namespace=grots-pizzeria,deployment.environment.name=compose
+
+x-health: &health
+  interval: 5s
+  timeout: 5s
+  retries: 24
+
+x-security: &security
+  # Shared HS256 key used to sign and validate the JWTs that secure service-to-service calls.
+  # This default is for local demos only; set your own JWT_SIGNING_KEY for anything shared.
+  JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-grots-pizzeria-local-demo-signing-key-0123456789}
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: src/GrotsPizzeria.Server/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      <<: [*telemetry, *security]
+      OTEL_SERVICE_NAME: grots-web
+      MENU_URL: http://menu:8081
+      ORDERS_URL: http://orders:8082
+      DELIVERY_URL: http://delivery:8084
+      # Where the browser sends its own OTLP (the Blazor client runs the OpenTelemetry SDK too). This is LGTM's
+      # published port, as seen from the browser; LGTM's collector allows cross-origin requests from http:// pages.
+      BROWSER_OTLP_ENDPOINT: ${BROWSER_OTLP_ENDPOINT:-http://localhost:4318}
+      # Where the "See telemetry" link in the UI's sidebar goes.
+      TELEMETRY_URL: http://localhost:3000/d/grots-http-semconv
+      # Opt in to the stable database semantic conventions.
+      OTEL_SEMCONV_STABILITY_OPT_IN: database
+    volumes:
+      - grots-web-data:/data
+    healthcheck:
+      <<: *health
+      test: ["CMD", "dotnet", "GrotsPizzeria.Server.dll", "healthcheck"]
+      start_period: 20s
+    depends_on:
+      orders:
+        condition: service_healthy
+      menu:
+        condition: service_healthy
+      delivery:
+        condition: service_healthy
+
+  menu:
+    build: ./services/menu
+    environment:
+      <<: [*telemetry, *security]
+      OTEL_SERVICE_NAME: grots-menu
+      SPECIAL_OFFERS: ${SPECIAL_OFFERS:-on}
+    healthcheck:
+      <<: *health
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8081/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      start_period: 15s
+    depends_on:
+      lgtm:
+        condition: service_healthy
+
+  orders:
+    build: ./services/orders
+    environment:
+      <<: [*telemetry, *security]
+      OTEL_SERVICE_NAME: grots-orders
+      CHECKOUT_URL: http://checkout:8083
+      DELIVERY_URL: http://delivery:8084
+      MENU_URL: http://menu:8081
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8082/healthz"]
+      start_period: 40s
+    depends_on:
+      menu:
+        condition: service_healthy
+      checkout:
+        condition: service_healthy
+      delivery:
+        condition: service_healthy
+
+  checkout:
+    build: ./services/checkout
+    environment:
+      <<: [*telemetry, *security]
+      OTEL_SERVICE_NAME: grots-checkout
+      CHECKOUT_FAILURE_RATE: ${CHECKOUT_FAILURE_RATE:-0.05}
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8083/healthz', timeout=3)"]
+      start_period: 15s
+    depends_on:
+      lgtm:
+        condition: service_healthy
+
+  delivery:
+    build: ./services/delivery
+    environment:
+      <<: [*telemetry, *security]
+      OTEL_SERVICE_NAME: grots-delivery
+    healthcheck:
+      <<: *health
+      test: ["CMD", "/delivery", "healthcheck"]
+      start_period: 10s
+    depends_on:
+      lgtm:
+        condition: service_healthy
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000" # Grafana
+      - "4317:4317" # OTLP/gRPC
+      - "4318:4318" # OTLP/HTTP
+    environment:
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /otel-lgtm/grafana/conf/provisioning/dashboards/grots/grots-http-semconv.json
+    volumes:
+      # Everything LGTM stores (metrics, logs, traces, Grafana state) so telemetry survives restarts.
+      - lgtm-data:/data
+      # The default dashboard.
+      - ./deploy/grafana/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/grots.yaml:ro
+      - ./deploy/grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/grots:ro
+
+volumes:
+  grots-web-data:
+  lgtm-data:

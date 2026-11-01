@@ -1,0 +1,77 @@
+# Validates the telemetry the applications emit against the OpenTelemetry semantic conventions
+# (plus Grot's own "grot.*" registry in ./weaver/registry) using OpenTelemetry Weaver's live-check.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.weaver.yml up --build
+#   docker compose -f docker-compose.yml -f docker-compose.weaver.yml logs -f weaver # findings, as they arrive
+#   curl -X POST http://localhost:4320/stop                                          # end the run; prints the summary
+#
+# Findings are streamed to the weaver container's log. To save a report instead, add `--output=/reports` to the command
+# below (and mount a folder there); `--format=json` gives machine-readable output.
+#
+# The applications are pointed at a collector that forwards everything to both Grafana (LGTM) and Weaver, so what
+# Weaver judges is exactly what ends up in Grafana. Weaver also emits its findings as OTLP logs to LGTM: look for
+# service_name="weaver" in Loki.
+
+x-via-collector: &via-collector
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otelcol:4318
+
+# The collector and Weaver are distroless images with nothing to run a health check
+# with, so the chain waits for them to have started rather than to be healthy.
+x-after-collector: &after-collector
+  otelcol:
+    condition: service_started
+
+services:
+  web:
+    environment:
+      <<: *via-collector
+      BROWSER_OTLP_ENDPOINT: http://localhost:4319
+    depends_on: *after-collector
+  menu:
+    environment: *via-collector
+    depends_on: *after-collector
+  orders:
+    environment: *via-collector
+    depends_on: *after-collector
+  checkout:
+    environment: *via-collector
+    depends_on: *after-collector
+  delivery:
+    environment: *via-collector
+    depends_on: *after-collector
+
+  otelcol:
+    image: otel/opentelemetry-collector:0.164.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - "4319:4318"
+    volumes:
+      - ./deploy/weaver/otelcol.yaml:/etc/otelcol/config.yaml:ro
+    depends_on:
+      lgtm:
+        condition: service_healthy
+      weaver:
+        condition: service_started
+
+  weaver:
+    image: otel/weaver:v0.28.0
+    command:
+      - registry
+      - live-check
+      - --registry=/registry
+      - --include-unreferenced
+      - --otlp-grpc-address=0.0.0.0
+      - --otlp-grpc-port=4317
+      - --admin-port=4320
+      # Keep listening while you use the app; stop explicitly with POST /stop (or after an hour of silence).
+      - --inactivity-timeout=3600
+      - --format=ansi
+      - --emit-otlp-logs
+      - --otlp-logs-endpoint=http://lgtm:4317
+    ports:
+      - "4320:4320" # Admin API: GET /health, POST /stop, POST /shutdown
+    volumes:
+      - ./weaver/registry:/registry:ro
+    depends_on:
+      lgtm:
+        condition: service_healthy

@@ -1,0 +1,98 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<li class="@CssClass" data-testid="delivery-step" aria-current="@(Current ? "step" : null)" title="@_tooltip">
+    <span class="dot" aria-hidden="true"></span>
+    @if (Emoji.Length > 0)
+    {
+        <span class="step-emoji" aria-hidden="true">@Emoji</span>
+    }
+    @Step.Label<span class="visually-hidden">@StateText</span>
+    @if (Step.Reached)
+    {
+        <span class="step-when"><time datetime="@Step.At.UtcDateTime.ToString("O")">@_relative</time></span>
+    }
+</li>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private string _tooltip = "";
+    private string _relative = "";
+    private bool _ticking;
+
+    [Parameter, EditorRequired]
+    public TrackingStep Step { get; set; } = default!;
+
+    /// <summary>This is the step the delivery is at now.</summary>
+    [Parameter]
+    public bool Current { get; set; }
+
+    /// <summary>This is the last step (Delivered): the current step pulses to show that things are still in progress, which they are not once it is reached.</summary>
+    [Parameter]
+    public bool Final { get; set; }
+
+    private string CssClass => $"{(Step.Completed ? "done" : "")} {(Current ? "current" : "")} {(Current && !Final ? "in-progress" : "")}".Replace("  ", " ").Trim();
+
+    // Decoration for the steps the delivery service describes (it only sends a label)
+    private string Emoji => Step.Status switch
+    {
+        "preparing" => "🧑‍🍳",
+        "baking" => "🔥",
+        "quality-control" => "🔍",
+        "out-for-delivery" => "🛵",
+        "delivered" => "😋",
+        _ => "",
+    };
+
+    private string StateText => Current ? " (current)" : Step.Completed ? " (completed)" : " (not yet)";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var iso = Step.At.UtcDateTime.ToString("O");
+        var when = await FormatAsync("grotsFormat.dateTimeLong", iso);
+        _tooltip = Step.Reached ? when : $"Expected {when}";
+        _relative = Step.Reached ? await FormatAsync("grotsFormat.relative", iso) : "";
+
+        if (Step.Reached && !_ticking)
+        {
+            _ticking = true;
+            _ = TickAsync(iso, _cts.Token);
+        }
+    }
+
+    private async Task TickAsync(string iso, CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                var text = await FormatAsync("grotsFormat.relative", Step.At.UtcDateTime.ToString("O"));
+
+                if (text != _relative)
+                {
+                    _relative = text;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task<string> FormatAsync(string function, string iso)
+    {
+        try
+        {
+            return await JS.InvokeAsync<string>(function, iso);
+        }
+        catch (JSException)
+        {
+            return iso;
+        }
+    }
+
+    public void Dispose() => _cts.Cancel();
+}
