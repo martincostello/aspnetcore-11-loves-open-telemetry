@@ -13,7 +13,7 @@
 
 @if (_error is not null)
 {
-    <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+    <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
 }
 else if (_order is null)
 {
@@ -31,7 +31,7 @@ else
                 }
                 else
                 {
-                    <ol class="steps" aria-label="Delivery progress">
+                    <ol class="steps" data-testid="delivery-steps" aria-label="Delivery progress">
                         @foreach (var step in _tracking.Steps)
                         {
                             <TrackingStepItem @key="step.Status" Step="step" Current="@(step.Status == _tracking.Status)" Final="@(step == _tracking.Steps[^1])" />
@@ -62,7 +62,7 @@ else
                         <tr><td>@line.Quantity × @line.Name</td><td class="num">@line.LineTotal.Gbp()</td></tr>
                     }
                 </tbody>
-                <tfoot>
+                <tfoot data-testid="totals">
                     <tr><td>Subtotal</td><td class="num">@_order.Subtotal.Gbp()</td></tr>
                     <tr><td>Tax (@_taxRate)</td><td class="num">@_order.Tax.Gbp()</td></tr>
                     <tr><td><strong>Total</strong></td><td class="num"><strong>@_order.Total.Gbp()</strong></td></tr>

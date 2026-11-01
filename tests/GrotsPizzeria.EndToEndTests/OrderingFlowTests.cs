@@ -12,28 +12,28 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
 
         // Pick two Margheritas, a Grot Special and a side of garlic bread from the menu (served by the Node.js service)
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await AddToCartAsync("Margherita", times: 2);
         await AddToCartAsync("Grot Special");
         await AddToCartAsync("Garlic Bread");
-        await Expect(Page.Locator(".badge-count")).ToHaveTextAsync("4");
+        await Expect(Page.GetByTestId("cart-count")).ToHaveTextAsync("4");
 
         // Pay (Java orders -> Python checkout -> Go delivery)
         await PlaceOrderAsync();
         await Expect(Page).ToHaveURLAsync(new Regex(@"/orders/ord_[0-9a-f]+$"));
 
         // The receipt adds up: 2 x 9.50 + 14.00 + 4.50 = 37.50, plus 8% tax
-        await Expect(Page.Locator("h1")).ToContainTextAsync("Order ord_");
-        await Expect(Page.Locator("tfoot")).ToContainTextAsync("£37.50");
-        await Expect(Page.Locator("tfoot")).ToContainTextAsync("£3.00");
-        await Expect(Page.Locator("tfoot")).ToContainTextAsync("£40.50");
+        await Expect(Page.GetByTestId("page-title")).ToContainTextAsync("Order ord_");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£37.50");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£3.00");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£40.50");
 
         // ...and the delivery is being tracked
-        await Expect(Page.Locator("ol.steps li").First).ToContainTextAsync("Preparing your order");
+        await Expect(Page.GetByTestId("delivery-step").First).ToContainTextAsync("Preparing your order");
 
         // The order shows up in the history
         await Page.GetByRole(AriaRole.Link, new() { Name = "My orders" }).ClickAsync();
-        await Expect(Page.Locator("table.table tbody tr").First).ToContainTextAsync("£40.50");
+        await Expect(Page.GetByTestId("order-row").First).ToContainTextAsync("£40.50");
     }
 
     [Fact]
@@ -44,14 +44,14 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         // Wait for the sign-in to finish (it redirects home) before navigating on, or the redirect wins the race.
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
 
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await AddToCartAsync("Pepperoni");
 
         await PlaceOrderAsync(cardLast4: "0000");
 
-        await Expect(Page.Locator(".alert-error")).ToContainTextAsync("Payment declined");
+        await Expect(Page.GetByTestId("error-alert")).ToContainTextAsync("Payment declined");
         await Expect(Page).ToHaveURLAsync(new Regex("/cart$"));
-        await Expect(Page.Locator(".badge-count")).ToHaveTextAsync("1");
+        await Expect(Page.GetByTestId("cart-count")).ToHaveTextAsync("1");
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
 
         await SignInAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await AddToCartAsync("Garlic Bread");
 
         // Placing an order is one trace: the click, the browser's HTTP call, then the BFF's work onwards
@@ -89,22 +89,22 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
     {
         await SignInAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await AddToCartAsync("Margherita", times: 3);
         await AddToCartAsync("Grot Special");
         await AddToCartAsync("Garlic Bread", times: 2);
-        await Expect(Page.Locator(".badge-count")).ToHaveTextAsync("6");
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Cart" }).ClickAsync();
+        await Expect(Page.GetByTestId("cart-count")).ToHaveTextAsync("6");
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Cart" }).ClickAsync();
 
-        var rows = Page.Locator("table.table tbody tr");
+        var rows = Page.GetByTestId("cart-line");
         await Expect(rows).ToHaveCountAsync(3);
 
         // One press takes all three Margheritas away
         await Page.GetByRole(AriaRole.Button, new() { Name = "Remove all Margherita from your cart" }).ClickAsync();
         await Expect(rows).ToHaveCountAsync(2);
         await Expect(rows.Filter(new() { HasText = "Margherita" })).ToHaveCountAsync(0);
-        await Expect(Page.Locator("tfoot")).ToContainTextAsync("£23.00"); // Grot Special £14.00 + 2 x Garlic Bread £4.50
-        await Expect(Page.Locator(".badge-count")).ToHaveTextAsync("3");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£23.00"); // Grot Special £14.00 + 2 x Garlic Bread £4.50
+        await Expect(Page.GetByTestId("cart-count")).ToHaveTextAsync("3");
 
         // ...and the rest, one at a time, until the cart is empty
         await Page.GetByRole(AriaRole.Button, new() { Name = "Remove all Grot Special from your cart" }).ClickAsync();
@@ -120,7 +120,7 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
 
         await SignInAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await AddToCartAsync("Garlic Bread");
         await PlaceOrderAsync();
         await Expect(Page).ToHaveURLAsync(new Regex(@"/orders/ord_[0-9a-f]+$"));
@@ -151,7 +151,7 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
 
         await Expect(Page).ToHaveURLAsync(new Regex("/cart$"));
-        await Expect(Page.Locator("h1")).ToHaveTextAsync("Your cart");
+        await Expect(Page.GetByTestId("page-title")).ToHaveTextAsync("Your cart");
     }
 
     [Theory]

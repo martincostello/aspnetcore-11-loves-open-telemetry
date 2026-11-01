@@ -9,7 +9,7 @@
 
 @if (_error is not null)
 {
-    <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+    <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
 }
 else if (_items is null)
 {
@@ -24,7 +24,7 @@ else
     <div class="grid grid-cards">
         @foreach (var item in items)
         {
-            <article class="panel pizza-card @(item.Offer is null ? "" : "on-offer")" aria-labelledby="item-@item.Id">
+            <article class="panel pizza-card @(item.Offer is null ? "" : "on-offer")" data-testid="menu-item" aria-labelledby="item-@item.Id">
                 <div class="pizza-emoji" aria-hidden="true">@item.Emoji</div>
                 <div class="panel-body">
                     <div class="pizza-title">
@@ -32,7 +32,7 @@ else
                             <h3 id="item-@item.Id">@item.Name</h3>
                             @if (item.Offer is not null)
                             {
-                                <span class="tag tag-offer">Special offer</span>
+                                <span class="tag tag-offer" data-testid="special-offer">Special offer</span>
                             }
                         </div>
                         @if (item.Popular || item.Vegetarian)

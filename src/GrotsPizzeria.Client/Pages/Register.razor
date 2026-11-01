@@ -27,7 +27,7 @@
 
             @if (_error is not null)
             {
-                <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+                <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
             }
 
             <button class="btn btn-primary" type="submit" disabled="@_submitting" aria-busy="@(_submitting ? "true" : "false")">Create account</button>

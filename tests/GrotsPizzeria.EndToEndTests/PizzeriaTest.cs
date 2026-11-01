@@ -59,7 +59,7 @@ public abstract class PizzeriaTest(PizzeriaFixture fixture) : IAsyncLifetime
 
     protected async Task AddToCartAsync(string pizza, int times = 1)
     {
-        var card = Page.Locator("article.pizza-card", new() { HasText = pizza });
+        var card = Page.GetByTestId("menu-item").Filter(new() { HasText = pizza });
 
         for (var i = 0; i < times; i++)
         {
@@ -70,7 +70,7 @@ public abstract class PizzeriaTest(PizzeriaFixture fixture) : IAsyncLifetime
     protected async Task PlaceOrderAsync(string cardLast4 = "4242")
     {
         // Navigate within the app: a full page load would empty the (in-memory) cart.
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Cart" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Cart" }).ClickAsync();
         await Page.GetByLabel("Delivery address").FillAsync("1 Loki Lane, Tempo Town");
         await Page.GetByLabel("Last 4 digits of your card").FillAsync(cardLast4);
         await Page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Place order") }).ClickAsync();

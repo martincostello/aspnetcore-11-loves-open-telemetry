@@ -8,7 +8,7 @@
 
 @if (_error is not null)
 {
-    <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+    <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
 }
 else if (_orders is null)
 {
@@ -26,7 +26,7 @@ else if (_orders.Count == 0)
 else
 {
     <section class="panel">
-        <table class="table">
+        <table class="table" data-testid="orders-table">
             <caption class="visually-hidden">Your orders, newest first</caption>
             <thead>
                 <tr><th scope="col">Order</th><th scope="col">Placed</th><th scope="col">Items</th><th scope="col" class="num">Total</th><th scope="col">Status</th></tr>
@@ -34,7 +34,7 @@ else
             <tbody>
                 @foreach (var order in _orders)
                 {
-                    <tr>
+                    <tr data-testid="order-row">
                         <td><a href="orders/@order.Id" aria-label="View order @order.Id"><code>@order.Id</code></a></td>
                         <td><LocalDateTime Value="order.CreatedAt" /></td>
                         <td>@order.Items.Sum(i => i.Quantity)</td>

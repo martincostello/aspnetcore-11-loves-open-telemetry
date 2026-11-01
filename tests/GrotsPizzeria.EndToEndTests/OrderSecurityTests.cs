@@ -113,14 +113,14 @@ public sealed class OrderSecurityTests(PizzeriaFixture fixture) : PizzeriaTest(f
         await Page.GotoAsync($"/orders/{aliceOrder}");
         await Expect(Page.GetByRole(AriaRole.Alert)).ToContainTextAsync("Order not found");
 
-        var text = await Page.Locator("main").InnerTextAsync();
+        var text = await Page.GetByTestId("content").InnerTextAsync();
         Assert.DoesNotContain("Loki Lane", text);
         Assert.DoesNotContain("txn_", text);
         Assert.DoesNotContain("£", text);
 
         // And it is not in their list of orders
         await Page.GotoAsync("/orders");
-        await Expect(Page.Locator("main")).Not.ToContainTextAsync(aliceOrder);
+        await Expect(Page.GetByTestId("content")).Not.ToContainTextAsync(aliceOrder);
     }
 
     public static TheoryData<string, string> BadOrders() => new()

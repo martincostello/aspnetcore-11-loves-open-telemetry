@@ -1,7 +1,7 @@
 @implements IDisposable
 @inject IJSRuntime JS
 
-<li class="@CssClass" aria-current="@(Current ? "step" : null)" title="@_tooltip">
+<li class="@CssClass" data-testid="delivery-step" aria-current="@(Current ? "step" : null)" title="@_tooltip">
     <span class="dot" aria-hidden="true"></span>
     @if (Emoji.Length > 0)
     {

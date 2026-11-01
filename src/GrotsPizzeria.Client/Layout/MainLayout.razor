@@ -8,19 +8,19 @@
 <a class="skip-link" href="#main" @onclick="SkipToContentAsync" @onclick:preventDefault>Skip to main content</a>
 
 <div class="app-shell">
-    <header class="topbar">
+    <header class="topbar" data-testid="topbar">
         <a class="brand" href="" aria-label="Grot's Pizzeria, home">
             <GrotLogo Size="34" />
             <span class="brand-name">Grot's Pizzeria</span>
         </a>
 
         <div class="topbar-actions">
-            <a class="icon-button @(Cart.Count > 0 ? "prominent" : "")" href="cart" title="@(Cart.Count > 0 ? "Checkout" : "Cart")" aria-label="@CartLabel">
+            <a class="icon-button @(Cart.Count > 0 ? "prominent" : "")" href="cart" data-testid="cart-link" title="@(Cart.Count > 0 ? "Checkout" : "Cart")" aria-label="@CartLabel">
                 <Icon Name="cart" />
                 @if (Cart.Count > 0)
                 {
                     <span class="checkout-label" aria-hidden="true">Checkout</span>
-                    <span class="badge-count" aria-hidden="true">@Cart.Count</span>
+                    <span class="badge-count" data-testid="cart-count" aria-hidden="true">@Cart.Count</span>
                 }
             </a>
             <span class="visually-hidden" role="status">@(Cart.Count == 0 ? "" : $"{Cart.Count} {(Cart.Count == 1 ? "item" : "items")} in your cart")</span>
@@ -29,7 +29,7 @@
 
             <AuthorizeView>
                 <Authorized>
-                    <span class="user-chip" title="Signed in as @context.User.Identity?.Name">
+                    <span class="user-chip" data-testid="user-chip" title="Signed in as @context.User.Identity?.Name">
                         <Icon Name="user" /> <span class="visually-hidden">Signed in as </span>@context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
                     </span>
                     <button class="btn btn-secondary btn-sm" @onclick="LogoutAsync">Sign out</button>
@@ -41,11 +41,11 @@
         </div>
     </header>
 
-    <nav class="sidebar" aria-label="Main">
+    <nav class="sidebar" data-testid="sidebar" aria-label="Main">
         <NavMenu />
     </nav>
 
-    <main class="content" id="main" tabindex="-1" @ref="_main">
+    <main class="content" data-testid="content" id="main" tabindex="-1" @ref="_main">
         @Body
     </main>
 </div>

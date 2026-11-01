@@ -48,14 +48,14 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
         await Page.GotoAsync("/menu");
 
         // Only the items on offer say so, and show what they cost with 15% off (9.50 becomes 8.08)
-        var margherita = Page.Locator("article.pizza-card", new() { HasText = "Margherita" });
+        var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
         await Expect(margherita).ToContainTextAsync("Special offer");
         await Expect(margherita).ToContainTextAsync("£9.50");
         await Expect(margherita).ToContainTextAsync("£8.08");
         await Expect(margherita).ToContainTextAsync("15% off");
-        await Expect(Page.Locator("article.pizza-card", new() { HasText = "Special offer" })).ToHaveCountAsync(2);
+        await Expect(Page.GetByTestId("menu-item").Filter(new() { HasText = "Special offer" })).ToHaveCountAsync(2);
 
-        var marinara = Page.Locator("article.pizza-card", new() { HasText = "Marinara" });
+        var marinara = Page.GetByTestId("menu-item").Filter(new() { HasText = "Marinara" });
         await Expect(marinara).Not.ToContainTextAsync("Special offer");
         await Expect(marinara).ToContainTextAsync("£8.50");
     }
@@ -70,25 +70,25 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
 
         await SignInAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
 
-        var margherita = Page.Locator("article.pizza-card", new() { HasText = "Margherita" });
-        var marinara = Page.Locator("article.pizza-card", new() { HasText = "Marinara" });
+        var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
+        var marinara = Page.GetByTestId("menu-item").Filter(new() { HasText = "Marinara" });
         await Expect(margherita).ToHaveClassAsync(new Regex("on-offer"));
 
         await AddToCartAsync("Margherita", times: 2);
-        await Page.Locator("header.topbar a[href='cart']").ClickAsync();
-        await Expect(Page.Locator("tfoot")).ToContainTextAsync("£16.16"); // 2 x £8.08
-        await Expect(Page.Locator("tbody tr")).ToContainTextAsync("Special offer");
+        await Page.GetByTestId("cart-link").ClickAsync();
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£16.16"); // 2 x £8.08
+        await Expect(Page.GetByTestId("cart-line")).ToContainTextAsync("Special offer");
 
         // When the offers end the menu is fetched again and the cart is priced at what will actually be charged
-        await Expect(Page.Locator("tfoot")).ToContainTextAsync("£19.00", new() { Timeout = 20_000 }); // 2 x £9.50
-        await Expect(Page.Locator("tbody tr")).Not.ToContainTextAsync("Special offer");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£19.00", new() { Timeout = 20_000 }); // 2 x £9.50
+        await Expect(Page.GetByTestId("cart-line")).Not.ToContainTextAsync("Special offer");
 
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await Expect(margherita).Not.ToHaveClassAsync(new Regex("on-offer"));
         await Expect(marinara).ToHaveClassAsync(new Regex("on-offer"));
-        await Expect(Page.Locator("article.pizza-card.on-offer")).ToHaveCountAsync(1);
+        await Expect(Page.GetByTestId("menu-item").Filter(new() { Has = Page.GetByTestId("special-offer") })).ToHaveCountAsync(1);
     }
 
 

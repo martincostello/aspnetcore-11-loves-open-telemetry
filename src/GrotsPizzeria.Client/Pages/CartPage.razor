@@ -35,12 +35,12 @@ else
                 <tbody>
                     @foreach (var line in Cart.Lines)
                     {
-                        <tr>
+                        <tr data-testid="cart-line">
                             <td>
                                 <span aria-hidden="true">@line.Item.Emoji</span> @line.Item.Name
                                 @if (line.Item.Offer is not null)
                                 {
-                                    <span class="tag tag-offer">Special offer</span>
+                                    <span class="tag tag-offer" data-testid="special-offer">Special offer</span>
                                 }
                             </td>
                             <td class="qty">
@@ -58,7 +58,7 @@ else
                         </tr>
                     }
                 </tbody>
-                <tfoot>
+                <tfoot data-testid="totals">
                     <tr><td colspan="2">Subtotal (tax is added at checkout)</td><td class="num"><strong>@Cart.Subtotal.Gbp()</strong></td><td></td></tr>
                 </tfoot>
             </table>
@@ -73,7 +73,7 @@ else
                     <label class="field">
                         <span>Delivery address</span>
                         <InputText @ref="_address" @bind-Value="_form.Address" placeholder="1 Loki Lane, Tempo Town" autocomplete="street-address" data-1p-ignore aria-required="true" aria-describedby="address-error" />
-                        <ValidationMessage For="() => _form.Address" id="address-error" role="alert" />
+                        <ValidationMessage For="() => _form.Address" id="address-error" role="alert" data-testid="validation-message" />
                     </label>
 
                     <label class="field">
@@ -89,14 +89,14 @@ else
                         <label class="field">
                             <span>Last 4 digits of your card</span>
                             <InputText @bind-Value="_form.CardLast4" maxlength="4" inputmode="numeric" autocomplete="off" data-1p-ignore aria-required="true" aria-describedby="card-hint card-error" />
-                            <ValidationMessage For="() => _form.CardLast4" id="card-error" role="alert" />
+                            <ValidationMessage For="() => _form.CardLast4" id="card-error" role="alert" data-testid="validation-message" />
                             <small class="muted" id="card-hint">Tip: a card ending in <code>0000</code> is always declined.</small>
                         </label>
                     }
 
                     @if (_error is not null)
                     {
-                        <div class="alert alert-error" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
+                        <div class="alert alert-error" data-testid="error-alert" role="alert"><strong>@_error.Title</strong> @_error.Detail</div>
                     }
 
                     <button class="btn btn-primary" type="submit" disabled="@_submitting" aria-busy="@(_submitting ? "true" : "false")">

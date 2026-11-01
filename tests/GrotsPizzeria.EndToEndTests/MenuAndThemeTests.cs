@@ -10,7 +10,7 @@ public sealed class MenuAndThemeTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         foreach (var (section, item) in new[] { ("Pizzas", "Grot Special"), ("Sides", "Garlic Bread"), ("Desserts", "Tiramisu") })
         {
             var region = Page.GetByRole(AriaRole.Region, new() { Name = section, Exact = true });
-            await Expect(region.Locator("article.pizza-card", new() { HasText = item })).ToBeVisibleAsync();
+            await Expect(region.GetByTestId("menu-item").Filter(new() { HasText = item })).ToBeVisibleAsync();
         }
     }
 
@@ -20,19 +20,19 @@ public sealed class MenuAndThemeTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await Page.GotoAsync("/");
 
         // Light system preference (see ColorScheme) -> light theme, with "System" selected
-        await Expect(Page.Locator("html")).ToHaveAttributeAsync("data-theme", "light");
+        await Expect(Page.GetByTestId("document")).ToHaveAttributeAsync("data-theme", "light");
         await Expect(Page.GetByLabel("Theme")).ToHaveValueAsync("system");
 
         // The system changes its mind and the page follows
         await Page.EmulateMediaAsync(new() { ColorScheme = ColorScheme.Dark });
-        await Expect(Page.Locator("html")).ToHaveAttributeAsync("data-theme", "dark");
+        await Expect(Page.GetByTestId("document")).ToHaveAttributeAsync("data-theme", "dark");
 
         // An explicit choice wins, and sticks across reloads
         await Page.GetByLabel("Theme").SelectOptionAsync("light");
-        await Expect(Page.Locator("html")).ToHaveAttributeAsync("data-theme", "light");
+        await Expect(Page.GetByTestId("document")).ToHaveAttributeAsync("data-theme", "light");
 
         await Page.ReloadAsync();
-        await Expect(Page.Locator("html")).ToHaveAttributeAsync("data-theme", "light");
+        await Expect(Page.GetByTestId("document")).ToHaveAttributeAsync("data-theme", "light");
         await Expect(Page.GetByLabel("Theme")).ToHaveValueAsync("light");
     }
 

@@ -18,16 +18,16 @@ public sealed class AccessibilityTests(PizzeriaFixture fixture) : PizzeriaTest(f
     {
         await Page.GotoAsync("/");
         await Page.GetByLabel("Theme").SelectOptionAsync(theme);
-        await Expect(Page.Locator("html")).ToHaveAttributeAsync("data-theme", theme);
+        await Expect(Page.GetByTestId("document")).ToHaveAttributeAsync("data-theme", theme);
 
         foreach (var path in new[] { "/", "/menu", "/login", "/register", "/does-not-exist" })
         {
             await Page.GotoAsync(path);
-            await Expect(Page.Locator("main h1")).ToBeVisibleAsync();
+            await Expect(Page.GetByTestId("page-title")).ToBeVisibleAsync();
 
             if (path == "/menu")
             {
-                await Expect(Page.Locator("article.pizza-card").First).ToBeVisibleAsync();
+                await Expect(Page.GetByTestId("menu-item").First).ToBeVisibleAsync();
             }
 
             await AssertNoViolationsAsync($"{path} ({theme})");
@@ -41,22 +41,22 @@ public sealed class AccessibilityTests(PizzeriaFixture fixture) : PizzeriaTest(f
     {
         await Page.GotoAsync("/");
         await Page.GetByLabel("Theme").SelectOptionAsync(theme);
-        await Expect(Page.Locator("html")).ToHaveAttributeAsync("data-theme", theme);
+        await Expect(Page.GetByTestId("document")).ToHaveAttributeAsync("data-theme", theme);
 
         await SignInAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" })).ToBeVisibleAsync();
 
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Menu" }).ClickAsync();
         await AddToCartAsync("Margherita", times: 2);
         await AddToCartAsync("Garlic Bread");
 
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "Cart" }).ClickAsync();
-        await Expect(Page.Locator("h1")).ToHaveTextAsync("Your cart");
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "Cart" }).ClickAsync();
+        await Expect(Page.GetByTestId("page-title")).ToHaveTextAsync("Your cart");
         await AssertNoViolationsAsync($"/cart ({theme})");
 
         // And with validation messages and the error banner showing
         await Page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Place order") }).ClickAsync();
-        await Expect(Page.Locator(".validation-message").First).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("validation-message").First).ToBeVisibleAsync();
         await AssertNoViolationsAsync($"/cart with validation errors ({theme})");
 
         await Page.GetByLabel("Delivery address").FillAsync("1 Loki Lane, Tempo Town");
@@ -64,11 +64,11 @@ public sealed class AccessibilityTests(PizzeriaFixture fixture) : PizzeriaTest(f
         await Page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Place order") }).ClickAsync();
 
         await Expect(Page).ToHaveURLAsync(new Regex(@"/orders/ord_[0-9a-f]+$"));
-        await Expect(Page.Locator("ol.steps li")).ToHaveCountAsync(5);
+        await Expect(Page.GetByTestId("delivery-step")).ToHaveCountAsync(5);
         await AssertNoViolationsAsync($"order details ({theme})");
 
-        await Page.Locator("nav.sidebar").GetByRole(AriaRole.Link, new() { Name = "My orders" }).ClickAsync();
-        await Expect(Page.Locator("table.table")).ToBeVisibleAsync();
+        await Page.GetByTestId("sidebar").GetByRole(AriaRole.Link, new() { Name = "My orders" }).ClickAsync();
+        await Expect(Page.GetByTestId("orders-table")).ToBeVisibleAsync();
         await AssertNoViolationsAsync($"/orders ({theme})");
     }
 

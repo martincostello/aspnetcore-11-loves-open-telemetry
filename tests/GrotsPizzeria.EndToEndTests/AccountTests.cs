@@ -18,13 +18,13 @@ public sealed class AccountTests(PizzeriaFixture fixture) : PizzeriaTest(fixture
 
         // Registering signs you in and takes you to the menu
         await Expect(Page).ToHaveURLAsync(new Regex("/menu$"));
-        await Expect(Page.Locator(".user-chip")).ToContainTextAsync("Ada Lovelace");
+        await Expect(Page.GetByTestId("user-chip")).ToContainTextAsync("Ada Lovelace");
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out" }).ClickAsync();
-        await Expect(Page.Locator("header.topbar").GetByRole(AriaRole.Link, new() { Name = "Sign in" })).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("topbar").GetByRole(AriaRole.Link, new() { Name = "Sign in" })).ToBeVisibleAsync();
 
         await SignInAsync(username, Password);
-        await Expect(Page.Locator(".user-chip")).ToContainTextAsync("Ada Lovelace");
+        await Expect(Page.GetByTestId("user-chip")).ToContainTextAsync("Ada Lovelace");
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed class AccountTests(PizzeriaFixture fixture) : PizzeriaTest(fixture
     {
         await SignInAsync(DemoUsername, "not-the-password");
 
-        await Expect(Page.Locator(".alert-error")).ToContainTextAsync("Invalid credentials");
+        await Expect(Page.GetByTestId("error-alert")).ToContainTextAsync("Invalid credentials");
         await Expect(Page).ToHaveURLAsync(new Regex("/login"));
     }
 
@@ -44,7 +44,7 @@ public sealed class AccountTests(PizzeriaFixture fixture) : PizzeriaTest(fixture
         await Page.GetByLabel("Password").FillAsync("password");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync();
 
-        await Expect(Page.Locator(".alert-error")).ToContainTextAsync("Registration failed");
+        await Expect(Page.GetByTestId("error-alert")).ToContainTextAsync("Registration failed");
     }
 
     private static IPageAssertions Expect(IPage page) => Assertions.Expect(page);
