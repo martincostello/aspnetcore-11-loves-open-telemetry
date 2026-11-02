@@ -30,7 +30,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Every endpoint except {@code /healthz} requires a valid HS256 JWT bearer token (stateless, no CSRF: this is a pure API).
+ * Every endpoint except {@code /healthz} and the API documentation requires a valid HS256 JWT bearer token (stateless, no CSRF: this is a pure API).
  */
 @Configuration
 @EnableWebSecurity
@@ -46,7 +46,7 @@ class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
-                        .requestMatchers("/healthz").permitAll()
+                        .requestMatchers("/healthz", "/", "/index.html", "/swagger-ui/**", "/openapi.json").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o
                         .jwt(Customizer.withDefaults())

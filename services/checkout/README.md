@@ -10,6 +10,12 @@ See [`docs/service-contract.md`](../../docs/service-contract.md) for the full AP
 
 Built with FastAPI, Pydantic and Uvicorn.
 
+## API documentation
+
+The root of the service, <http://localhost:8083>, is a page that shows its OpenAPI document (`/openapi.json`) with Swagger UI, loaded
+from a CDN. It needs no token. FastAPI generates the document from the routes and the Pydantic models, so describe an endpoint with
+the arguments of its decorator (`summary`, `responses`) and a model with `Field(description=...)`. The page is in `app/static`.
+
 ## Telemetry
 
 Zero-code instrumentation with the OpenTelemetry Python distro, using only packages published by OpenTelemetry:

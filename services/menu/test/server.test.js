@@ -47,6 +47,31 @@ test('health check is anonymous', async () => {
   assert.equal((await fetch(`${base}/healthz`)).status, 200);
 });
 
+test('serves the API documentation page at the root, without a token', async () => {
+  for (const path of ['/', '/swagger-ui/theme.css', '/swagger-ui/init.js']) {
+    const response = await fetch(`${base}${path}`);
+    assert.equal(response.status, 200, path);
+  }
+
+  const page = await (await fetch(`${base}/`)).text();
+  assert.match(page, /<title>grots-menu API/);
+  assert.match(page, /data-spec-url="\/openapi\.json"/);
+});
+
+test('describes the API in an OpenAPI document, without a token', async () => {
+  const response = await fetch(`${base}/openapi.json`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /application\/json/);
+
+  const document = await response.json();
+  assert.match(document.openapi, /^3\./);
+  assert.equal(document.info.title, 'grots-menu');
+  assert.deepEqual(Object.keys(document.paths).sort(), ['/healthz', '/menu', '/menu/price', '/menu/{id}']);
+  assert.equal(document.components.securitySchemes.bearerAuth.scheme, 'bearer');
+  assert.deepEqual(document.paths['/healthz'].get.security, []);
+  assert.ok(document.components.schemas.MenuItem.properties.offer);
+});
+
 test('lists the menu', async () => {
   const items = await (await get('/menu')).json();
   assert.equal(items.length, 30); // 12 pizzas, 12 sides and 6 desserts

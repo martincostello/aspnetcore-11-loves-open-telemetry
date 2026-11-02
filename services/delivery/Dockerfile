@@ -6,6 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY *.go ./
+COPY static ./static
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/delivery .
 
 FROM gcr.io/distroless/static-debian12:nonroot

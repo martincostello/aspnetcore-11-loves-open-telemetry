@@ -165,6 +165,43 @@ $steps = [ordered]@{
         Invoke-Native docker @('compose', '-f', 'docker-compose.yml', 'config', '--quiet')
         Invoke-Native docker @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.weaver.yml', 'config', '--quiet')
 
+        # The API documentation page is the same in every application, which are built separately, so each has its own copy
+        $pages = @{
+            'grots-menu'     = 'services/menu/public'
+            'grots-orders'   = 'services/orders/src/main/resources/static'
+            'grots-checkout' = 'services/checkout/app/static'
+            'grots-delivery' = 'services/delivery/static'
+            'grots-web'      = 'src/GrotsPizzeria.Server/wwwroot/swagger-ui'
+        }
+        $differences = foreach ($service in $pages.Keys) {
+            $page = $pages[$service]
+            $assets = $service -eq 'grots-web' ? $page : "$page/swagger-ui"
+            $reference = 'services/menu/public/swagger-ui'
+
+            foreach ($file in 'theme.css', 'theme.js', 'init.js', 'grot.svg', 'favicon.svg') {
+                if ((Get-FileHash (Join-Path $root $assets $file)).Hash -ne (Get-FileHash (Join-Path $root $reference $file)).Hash) {
+                    "$assets/$file is not the same as $reference/$file"
+                }
+            }
+
+            foreach ($file in @{ 'grot.svg' = 'img/grot.svg'; 'favicon.svg' = 'favicon.svg' }.GetEnumerator()) {
+                if ((Get-FileHash (Join-Path $root $assets $file.Key)).Hash -ne (Get-FileHash (Join-Path $root 'src/GrotsPizzeria.Client/wwwroot' $file.Value)).Hash) {
+                    "$assets/$($file.Key) is not the same as the UI's"
+                }
+            }
+
+            $index = Join-Path $root "$page/index.html"
+            if ((Get-Content -Raw $index).Replace($service, '{{SERVICE}}') -ne (Get-Content -Raw (Join-Path $root 'services/menu/public/index.html')).Replace('grots-menu', '{{SERVICE}}')) {
+                "$page/index.html differs from the others by more than the service name"
+            }
+        }
+
+        if ($differences) {
+            throw "The API documentation page must be the same in every application (change one and copy it to the others):`n$($differences -join "`n")"
+        }
+
+        Write-Host 'The API documentation page is the same in all 5 applications'
+
         foreach ($file in Get-ChildItem -Path (Join-Path $root 'deploy/grafana/dashboards') -Filter '*.json') {
             $dashboard = Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
 

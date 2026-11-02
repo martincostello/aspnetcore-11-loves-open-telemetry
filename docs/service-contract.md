@@ -29,6 +29,7 @@ flowchart TD
 | Listen port | `PORT` environment variable, defaulting to the port in the diagram above. Listen on all interfaces (`0.0.0.0`). |
 | Downstream URLs | `MENU_URL`, `ORDERS_URL`, `CHECKOUT_URL`, `DELIVERY_URL` (no trailing slash). Defaults are `http://localhost:<port>`. |
 | Health | `GET /healthz` → `200 {"status":"ok"}` (anonymous) |
+| API documentation | `GET /openapi.json` is the OpenAPI document, and `GET /` is a page that shows it (Swagger UI), both anonymous. The BFF's page is at `/swagger`, as its root is the UI. See the README. |
 | Auth | `Authorization: Bearer <jwt>` on everything else, see below |
 | Errors | Non-2xx responses carry `{"title": string, "status": int, "detail": string}` |
 | Service names | `OTEL_SERVICE_NAME` = `grots-web`, `grots-menu`, `grots-orders`, `grots-checkout`, `grots-delivery` |
@@ -39,8 +40,8 @@ flowchart TD
 
 ## Service-to-service security (JWT)
 
-Every call between applications carries a JWT bearer token (`Authorization: Bearer <jwt>`). Only `GET /healthz` is
-anonymous; every other endpoint of menu, orders, checkout and delivery returns `401` (problem body, `title: "Unauthorized"`)
+Every call between applications carries a JWT bearer token (`Authorization: Bearer <jwt>`). Only `GET /healthz` and the
+API documentation (`GET /` and `GET /openapi.json`) are anonymous; every other endpoint of menu, orders, checkout and delivery returns `401` (problem body, `title: "Unauthorized"`)
 when the token is missing, malformed, expired, or fails validation.
 
 * The BFF (`grots-web`) mints the tokens. For a signed-in user `sub` is the user id; for anonymous browsing it is `anonymous`.

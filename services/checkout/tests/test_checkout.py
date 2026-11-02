@@ -67,6 +67,33 @@ def test_tax_rate_must_be_a_fraction_from_zero_to_below_one(value):
         parse_tax_rate(value)
 
 
+def test_documentation_page_is_the_root_and_needs_no_token():
+    for path in ["/", "/swagger-ui/theme.css", "/swagger-ui/init.js", "/swagger-ui/grot.svg"]:
+        response = client.get(path)
+        assert response.status_code == 200, path
+
+    page = client.get("/")
+    assert page.headers["content-type"].startswith("text/html")
+    assert "<title>grots-checkout API" in page.text
+    assert 'data-spec-url="/openapi.json"' in page.text
+
+
+def test_openapi_document_needs_no_token():
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+
+    document = response.json()
+    assert document["openapi"].startswith("3.")
+    assert document["info"]["title"] == "grots-checkout"
+    assert set(document["paths"]) == {"/checkout", "/healthz"}
+    assert document["components"]["securitySchemes"]["HTTPBearer"]["scheme"] == "bearer"
+
+    operation = document["paths"]["/checkout"]["post"]
+    assert operation["security"] == [{"HTTPBearer": []}]
+    assert set(operation["responses"]) == {"201", "400", "401", "402", "503"}  # not FastAPI's 422: invalid input is a 400
+    assert "security" not in document["paths"]["/healthz"]["get"]
+
+
 def test_cash_does_not_need_card():
     assert post(body(paymentMethod="cash", cardLast4=None)).status_code == 201
 

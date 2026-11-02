@@ -13,14 +13,33 @@ internal static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/auth");
+        var group = app.MapGroup("/api/auth").WithTags("Account");
 
-        group.MapPost("/register", RegisterAsync);
-        group.MapPost("/login", LoginAsync);
-        group.MapPost("/logout", LogoutAsync).RequireAuthorization();
+        group.MapPost("/register", RegisterAsync)
+            .WithSummary("Register a new account")
+            .WithDescription("Creates the account and signs the new user in (the response sets the cookie).")
+            .Produces<UserInfo>(StatusCodes.Status201Created)
+            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+
+        group.MapPost("/login", LoginAsync)
+            .WithSummary("Sign in")
+            .WithDescription("Checks the credentials and sets the cookie. Too many failed attempts lock the account for a few minutes.")
+            .Produces<UserInfo>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status401Unauthorized)
+            .Produces<ProblemResponse>(StatusCodes.Status429TooManyRequests);
+
+        group.MapPost("/logout", LogoutAsync)
+            .RequireAuthorization()
+            .WithSummary("Sign out")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         group.MapGet("/me", (ClaimsPrincipal user) => user.Identity?.IsAuthenticated is true
             ? new UserInfo(true, user.Identity.Name, user.FindFirstValue(ClaimTypes.GivenName))
-            : new UserInfo(false));
+            : new UserInfo(false))
+            .WithSummary("See who is signed in")
+            .WithDescription("Never fails: a request that is not signed in gets `isAuthenticated: false`.");
 
         return app;
     }

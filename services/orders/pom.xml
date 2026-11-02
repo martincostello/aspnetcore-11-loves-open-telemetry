@@ -20,6 +20,7 @@
     <opentelemetry-instrumentation.version>2.33.1</opentelemetry-instrumentation.version>
     <otel.agent.dir>${project.build.directory}/otel</otel.agent.dir>
     <pmd.version>7.29.0</pmd.version>
+    <springdoc.version>3.2.0</springdoc.version>
   </properties>
 
   <dependencyManagement>
@@ -44,6 +45,18 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+    </dependency>
+    <!-- Generates the OpenAPI document (served at /openapi.json) from the controllers and models. The documentation page itself
+         (Swagger UI, from a CDN) is a static page, so the library's own copy of Swagger UI is not used. -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+      <version>${springdoc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
     </dependency>
     <!-- Only used for the custom metric and span attribute; the agent provides the implementation. -->
     <dependency>

@@ -94,6 +94,10 @@ start the stack again with its default settings.
 - Users must only ever see their own orders (the BFF answers 404 for anyone else's), and an order must never be accepted for
   zero or a negative amount. Validate input at each boundary, not only in the UI.
 - The ASP.NET Core apps use ASP.NET Core Identity for authentication.
+- Each application describes its API with OpenAPI (`/openapi.json`), and shows it with a Swagger UI page that needs no sign-in
+  (at `/`, or `/swagger` for the BFF). When you add or change an endpoint, describe it in the document (summary, responses,
+  schemas) in the way of its language: see the README. The page and its theme are identical in every application, each having
+  its own copy: change one and copy it to the others (`build.ps1 -Only config` checks).
 - Never commit real secrets. The demo values in the repository (the demo account, the JWT key in `docker-compose.yml`) are
   synthetic. Check staged changes for credentials before committing.
 

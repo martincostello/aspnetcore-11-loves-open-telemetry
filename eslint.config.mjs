@@ -33,4 +33,13 @@ export default [
       globals: globals.browser,
     },
   },
+
+  {
+    files: ['**/swagger-ui/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'script',
+      globals: { ...globals.browser, SwaggerUIBundle: 'readonly' },
+    },
+  },
 ];

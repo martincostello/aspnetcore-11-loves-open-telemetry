@@ -12,6 +12,7 @@ ENV NODE_ENV=production \
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json instrumentation.js ./
 COPY src ./src
+COPY public ./public
 USER node
 EXPOSE 8081
 CMD ["node", "--import", "./instrumentation.js", "src/server.js"]

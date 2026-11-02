@@ -17,6 +17,13 @@ Deliveries are held in memory. Progress is derived from the time elapsed since t
 | `handlers.go` | HTTP handlers, `ServeMux` routes (Go 1.22+ patterns) |
 | `store.go` | Mutex-guarded in-memory store and the delivery timeline |
 
+## API documentation
+
+The root of the service, <http://localhost:8084>, is a page that shows its OpenAPI document (`/openapi.json`) with Swagger UI, loaded
+from a CDN. It needs no token. The document is built by [kin-openapi](https://github.com/getkin/kin-openapi) in `openapi.go`: the
+schemas are generated from the Go types that the service sends and receives, and the operations are described next to them (keep
+them in step with the routes in `newMux`). The page is in `static`, embedded in the binary (`docs.go`).
+
 ## OpenTelemetry
 
 * The SDK is configured only through the standard `OTEL_*` environment variables
