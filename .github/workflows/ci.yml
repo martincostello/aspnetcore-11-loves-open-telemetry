@@ -283,6 +283,10 @@ jobs:
               print(f"{path}: {len(dashboard['panels'])} panels")
           PY
 
+      - name: Validate the API documentation pages are the same
+        shell: pwsh
+        run: ./build.ps1 -Only docs
+
       - name: Validate Weaver registry
         run: docker run --rm --volume "$PWD/weaver/registry:/registry:ro" otel/weaver:v0.28.0 registry check --registry /registry
 

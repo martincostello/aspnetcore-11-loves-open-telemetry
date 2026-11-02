@@ -13,7 +13,7 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
     private int _menuRequests;
 
     /// <summary>Replaces the menu the browser gets with one where the items <paramref name="onOffer"/> picks have the offer.</summary>
-    private async Task OfferAsync(Func<int, (string Id, DateTimeOffset EndsAt)[]> onOffer) =>
+    private async Task OfferAsync(Func<int, (string Id, DateTimeOffset EndsAt)[]> onOffer, decimal discount = 0.15m) =>
         await Page.RouteAsync("**/api/menu", async route =>
         {
             var response = await route.FetchAsync();
@@ -29,8 +29,8 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
                     var price = (decimal)item!["price"]!;
                     item["offer"] = new JsonObject
                     {
-                        ["discount"] = 0.15,
-                        ["price"] = Math.Round(price * 0.85m, 2, MidpointRounding.AwayFromZero),
+                        ["discount"] = discount,
+                        ["price"] = Math.Round(price * (1 - discount), 2, MidpointRounding.AwayFromZero),
                         ["endsAt"] = offer.EndsAt.ToString("O"),
                     };
                 }
@@ -38,6 +38,18 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
 
             await route.FulfillAsync(new() { Response = response, Body = menu.ToJsonString() });
         });
+
+    [Fact]
+    public async Task A_Fractional_Discount_Is_Shown_As_It_Is()
+    {
+        await OfferAsync(_ => [("margherita", DateTimeOffset.UtcNow.AddMinutes(5))], discount: 0.125m);
+        await Page.GotoAsync("/menu");
+
+        // 9.50 less 12.5% is 8.31, and it says 12.5% (not 12%)
+        var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
+        await Expect(margherita).ToContainTextAsync("£8.31");
+        await Expect(margherita).ToContainTextAsync("12.5% off");
+    }
 
     [Fact]
     public async Task Items_On_Special_Offer_Show_Their_Offer_Price()

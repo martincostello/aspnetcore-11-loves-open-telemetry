@@ -9,7 +9,8 @@ const DEFAULT_OFFER_DISCOUNT = 0.15;
 /**
  * The fraction taken off an item on special offer (0.15 is 15% off): OFFER_DISCOUNT, or 0.15 if it is not set (a blank value,
  * as Docker Compose passes for an unset variable, is not set). It is sent to clients with every offer, which show it as they
- * see fit, so nothing else needs to know it. A value that is not above 0 and below 1 stops the service starting.
+ * see fit, so nothing else needs to know it. A value that is not above 0 and below 1, or that has more than 4 decimal places (see
+ * offerPrice), stops the service starting.
  *
  * @param {string | undefined} value
  */
@@ -24,6 +25,12 @@ export function parseDiscount(value) {
 
   if (!Number.isFinite(discount) || discount <= 0 || discount >= 1) {
     throw new Error(`OFFER_DISCOUNT must be a fraction above 0 and below 1 (0.15 is 15% off), but was '${text}'.`);
+  }
+
+  // Prices are worked out in hundredths of a percent (see offerPrice), so more precision than that would be advertised as one
+  // rate and charged as another
+  if (Math.abs(discount * 10_000 - Math.round(discount * 10_000)) > 1e-9) {
+    throw new Error(`OFFER_DISCOUNT can have at most 4 decimal places (0.1235 is 12.35% off), but was '${text}'.`);
   }
 
   return discount;

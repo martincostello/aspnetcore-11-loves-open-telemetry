@@ -55,11 +55,11 @@ else
                         @if (item.Offer is { } offer)
                         {
                             <span class="price">
-                                <span class="visually-hidden">Special offer, @offer.PercentOff% off. Was @Money.Format(item.Price, item.Currency), now @Money.Format(offer.Price, item.Currency)</span>
+                                <span class="visually-hidden">Special offer, @offer.PercentOffText% off. Was @Money.Format(item.Price, item.Currency), now @Money.Format(offer.Price, item.Currency)</span>
                                 <span aria-hidden="true">
                                     <s class="was">@Money.Format(item.Price, item.Currency)</s>
                                     <strong class="now">@Money.Format(offer.Price, item.Currency)</strong>
-                                    <span class="off">@offer.PercentOff% off</span>
+                                    <span class="off">@offer.PercentOffText% off</span>
                                 </span>
                             </span>
                         }

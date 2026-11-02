@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace GrotsPizzeria.EndToEndTests;
@@ -28,7 +29,10 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await Expect(Page.GetByTestId("page-title")).ToContainTextAsync("Order ord_");
         await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£37.50");
 
-        var rate = decimal.Parse(Regex.Match(await Page.GetByTestId("totals").InnerTextAsync(), @"Tax \(([\d.]+)%\)").Groups[1].Value, CultureInfo.InvariantCulture) / 100m;
+        // (The page rounds the rate to show it, so the exact one is read from the order itself)
+        var orderId = Regex.Match(Page.Url, "ord_[0-9a-f]+").Value;
+        var order = JsonNode.Parse(await (await Page.Context.APIRequest.GetAsync($"/api/orders/{orderId}")).TextAsync())!;
+        var rate = (decimal)order["taxRate"]!;
         var tax = Math.Round(37.50m * rate, 2, MidpointRounding.AwayFromZero);
         var total = 37.50m + tax;
         await Expect(Page.GetByTestId("totals")).ToContainTextAsync($"£{tax.ToString("0.00", CultureInfo.InvariantCulture)}");

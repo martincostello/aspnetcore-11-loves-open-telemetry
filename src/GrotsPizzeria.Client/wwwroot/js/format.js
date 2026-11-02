@@ -14,7 +14,9 @@ window.grotsFormat = {
     // The currency is an ISO 4217 code that comes from the API; one that Intl does not know is shown as it is.
     currency(amount, currency) {
         try {
-            return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+            // Always 2 decimal places, as the API's amounts have: Intl would show a currency such as the yen with none, rounding
+            // 9.50 to 10 when 9.50 is what is charged.
+            return new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
         } catch {
             return `${amount.toFixed(2)} ${currency}`;
         }

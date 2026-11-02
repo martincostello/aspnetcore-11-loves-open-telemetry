@@ -16,6 +16,7 @@
       javascript  ESLint and Stylelint (the JavaScript and the CSS)
       workflows   actionlint on the GitHub Actions workflows (needs Docker)
       config      the Docker Compose files, the Grafana dashboard and the Weaver registry (needs Docker)
+      docs        the API documentation page, which every application has its own identical copy of
       go          gofmt, golangci-lint, go build, go test               (grots-delivery)
       python      Ruff and pytest                                       (grots-checkout)
       node        npm test                                              (grots-menu)
@@ -55,10 +56,10 @@
 #>
 [CmdletBinding()]
 param(
-    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'go', 'python', 'node', 'java', 'dotnet', 'e2e' })]
+    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e' })]
     [string[]] $Only,
 
-    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'go', 'python', 'node', 'java', 'dotnet', 'e2e' })]
+    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e' })]
     [string[]] $Skip,
 
     [string] $Configuration = 'Release',
@@ -165,7 +166,23 @@ $steps = [ordered]@{
         Invoke-Native docker @('compose', '-f', 'docker-compose.yml', 'config', '--quiet')
         Invoke-Native docker @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.weaver.yml', 'config', '--quiet')
 
+        foreach ($file in Get-ChildItem -Path (Join-Path $root 'deploy/grafana/dashboards') -Filter '*.json') {
+            $dashboard = Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
+
+            if (-not $dashboard.uid -or -not $dashboard.panels) {
+                throw "$($file.Name) is not a dashboard (it needs a uid and panels)."
+            }
+
+            Write-Host "$($file.Name): $($dashboard.panels.Count) panels"
+        }
+
+        $weaver = Get-WorkflowImage 'otel/weaver:v[0-9.]+'
+        Invoke-Native docker @('run', '--rm', '--volume', "$(Join-Path $root 'weaver/registry'):/registry:ro", $weaver, 'registry', 'check', '--registry', '/registry')
+    }
+
+    docs       = {
         # The API documentation page is the same in every application, which are built separately, so each has its own copy
+        # (CI runs this step too)
         $pages = @{
             'grots-menu'     = 'services/menu/public'
             'grots-orders'   = 'services/orders/src/main/resources/static'
@@ -201,19 +218,6 @@ $steps = [ordered]@{
         }
 
         Write-Host 'The API documentation page is the same in all 5 applications'
-
-        foreach ($file in Get-ChildItem -Path (Join-Path $root 'deploy/grafana/dashboards') -Filter '*.json') {
-            $dashboard = Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
-
-            if (-not $dashboard.uid -or -not $dashboard.panels) {
-                throw "$($file.Name) is not a dashboard (it needs a uid and panels)."
-            }
-
-            Write-Host "$($file.Name): $($dashboard.panels.Count) panels"
-        }
-
-        $weaver = Get-WorkflowImage 'otel/weaver:v[0-9.]+'
-        Invoke-Native docker @('run', '--rm', '--volume', "$(Join-Path $root 'weaver/registry'):/registry:ro", $weaver, 'registry', 'check', '--registry', '/registry')
     }
 
     go         = {

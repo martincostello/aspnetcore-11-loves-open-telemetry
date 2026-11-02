@@ -33,7 +33,7 @@ Run everything CI runs with the PowerShell 7 script in the repository root (it w
 pwsh ./build.ps1                  # every step; Docker must be running
 pwsh ./build.ps1 -Skip e2e        # everything except the slow end-to-end tests
 pwsh ./build.ps1 -Only go,python  # just some steps
-pwsh ./build.ps1 -List            # the steps: markdown, javascript, workflows, config, go, python, node, java, dotnet, e2e
+pwsh ./build.ps1 -List            # the steps: markdown, javascript, workflows, config, docs, go, python, node, java, dotnet, e2e
 ```
 
 The script's help and the README (Prerequisites) list what each step needs. The toolchain versions are pinned by `global.json`,
@@ -97,7 +97,7 @@ start the stack again with its default settings.
 - Each application describes its API with OpenAPI (`/openapi.json`), and shows it with a Swagger UI page that needs no sign-in
   (at `/`, or `/swagger` for the BFF). When you add or change an endpoint, describe it in the document (summary, responses,
   schemas) in the way of its language: see the README. The page and its theme are identical in every application, each having
-  its own copy: change one and copy it to the others (`build.ps1 -Only config` checks).
+  its own copy: change one and copy it to the others (`build.ps1 -Only docs` checks, and CI runs it).
 - Never commit real secrets. The demo values in the repository (the demo account, the JWT key in `docker-compose.yml`) are
   synthetic. Check staged changes for credentials before committing.
 

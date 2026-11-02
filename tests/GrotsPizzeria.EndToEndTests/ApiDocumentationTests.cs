@@ -46,9 +46,13 @@ public sealed class ApiDocumentationTests(PizzeriaFixture fixture) : PizzeriaTes
         Assert.Equal("grots-web", (string)document["info"]!["title"]!);
 
         var paths = document["paths"]!.AsObject().Select(p => p.Key).ToHashSet();
-        Assert.Superset(
-            new HashSet<string> { "/api/menu", "/api/orders", "/api/orders/{id}", "/api/orders/{id}/tracking", "/api/auth/login", "/api/auth/register", "/api/config", "/healthz" },
-            paths);
+
+        // The document has at least these (it has others too, such as /api/auth/me)
+        foreach (var expected in new[] { "/api/menu", "/api/orders", "/api/orders/{id}", "/api/orders/{id}/tracking", "/api/auth/login", "/api/auth/register", "/api/config", "/healthz" })
+        {
+            Assert.Contains(expected, paths);
+        }
+
         Assert.DoesNotContain(paths, p => p.StartsWith("/swagger", StringComparison.Ordinal) || p.StartsWith("/openapi", StringComparison.Ordinal));
 
         // Placing an order needs the cookie that signing in sets, and the menu does not

@@ -39,8 +39,11 @@ test('reads the discount from the configuration, which must be a fraction betwee
   assert.equal(parseDiscount(undefined), 0.15);
   assert.equal(parseDiscount(''), 0.15);
   assert.equal(parseDiscount(' 0.25 '), 0.25);
+  assert.equal(parseDiscount('0.125'), 0.125);
+  assert.equal(parseDiscount('0.1235'), 0.1235); // the most precision there is: hundredths of a percent
 
-  for (const bad of ['15', '0', '1', '-0.1', 'half', 'NaN', 'Infinity']) {
+  // 0.12365 would be advertised as 12.365% off but priced at 12.37%, so it is refused
+  for (const bad of ['15', '0', '1', '-0.1', 'half', 'NaN', 'Infinity', '0.12365', '0.00001']) {
     assert.throws(() => parseDiscount(bad), /OFFER_DISCOUNT/, bad);
   }
 });

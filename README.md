@@ -169,7 +169,7 @@ the Aspire dashboard links to each of them, and a service on its own serves its 
 
 The page, its theme and its scripts are the same in every application. The applications are built separately, so each has its
 own copy (in `wwwroot/swagger-ui` for the BFF, and in a `swagger-ui` folder of the static files of the others), and
-`build.ps1` checks that they are identical: change one and copy it to the others.
+`build.ps1 -Only docs` (which CI runs too) checks that they are identical: change one and copy it to the others.
 
 ## Looking at the telemetry
 
@@ -309,6 +309,7 @@ pwsh ./build.ps1 -List            # Shows the steps
 | `javascript` | ESLint and Stylelint | Node.js |
 | `workflows` | actionlint on the GitHub Actions workflows | Docker |
 | `config` | The Compose files, the Grafana dashboard and the Weaver registry | Docker |
+| `docs` | That every application has the same copy of the API documentation page | PowerShell 7 |
 | `go` | gofmt, golangci-lint, `go build`, `go test` | Go, golangci-lint v2 |
 | `python` | Ruff and pytest, in a virtual environment (`services/checkout/.venv`) | Python 3 |
 | `node` | The menu service's tests | Node.js |
