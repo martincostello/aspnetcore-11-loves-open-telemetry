@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject IJSRuntime JS
+@inject TimeProvider Time
 
 <li class="@CssClass" data-testid="delivery-step" aria-current="@(Current ? "step" : null)" title="@_tooltip">
     <span class="dot" aria-hidden="true"></span>
@@ -62,7 +63,7 @@
 
     private async Task TickAsync(string iso, CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1), Time);
 
         try
         {

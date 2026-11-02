@@ -106,6 +106,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ServiceTokenIssuer>();
 builder.Services.AddTransient<ServiceTokenHandler>();
 builder.Services.AddSingleton<Telemetry>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 AddService<MenuClient>(builder, "MENU_URL", 8081);
 AddService<OrdersClient>(builder, "ORDERS_URL", 8082);

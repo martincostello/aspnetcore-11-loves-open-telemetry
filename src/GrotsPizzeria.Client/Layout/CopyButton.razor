@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject IJSRuntime JS
+@inject TimeProvider Time
 
 <button type="button" class="copy-button" title="Copy @Label" aria-label="Copy @Label" @onclick="CopyAsync">
     <Icon Name="@(_copied ? "check" : "copy")" />
@@ -36,7 +37,7 @@
 
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(2), _cts.Token);
+            await Task.Delay(TimeSpan.FromSeconds(2), Time, _cts.Token);
         }
         catch (OperationCanceledException)
         {

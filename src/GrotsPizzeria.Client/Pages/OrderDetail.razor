@@ -3,6 +3,7 @@
 @implements IDisposable
 @inject ApiClient Api
 @inject IJSRuntime JS
+@inject TimeProvider Time
 
 <PageTitle>Order @Id · Grot's Pizzeria</PageTitle>
 
@@ -101,7 +102,7 @@ else
 
     private async Task PollTrackingAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3), Time);
 
         do
         {
