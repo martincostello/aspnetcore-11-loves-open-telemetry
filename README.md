@@ -121,6 +121,8 @@ aspire run
 or `dotnet run --project src/GrotsPizzeria.AppHost`, or open the solution in Visual Studio / VS Code and start the
 `GrotsPizzeria.AppHost` project. The Aspire dashboard opens and lists every resource, with its logs, traces and metrics.
 
+Open the app from the `grots-web` link in the dashboard. Under Aspire the BFF gets a free port rather than 8080.
+
 > [!WARNING]
 > This is a sample, and the launch profiles run the Aspire dashboard **without authentication**
 > (`ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS`), so that the browser can send its telemetry to the dashboard's OTLP
