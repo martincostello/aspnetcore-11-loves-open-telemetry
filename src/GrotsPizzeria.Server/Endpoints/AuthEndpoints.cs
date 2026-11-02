@@ -29,6 +29,7 @@ internal static class AuthEndpoints
         RegisterRequest request,
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn,
+        Telemetry telemetry,
         ILogger<ApplicationUser> logger)
     {
         var username = request.Username?.Trim() ?? string.Empty;
@@ -44,7 +45,7 @@ internal static class AuthEndpoints
 
         if (!result.Succeeded)
         {
-            Telemetry.RecordAuth("register", success: false);
+            telemetry.RecordAuth("register", success: false);
 
             return result.Errors.Any(e => e.Code is nameof(IdentityErrorDescriber.DuplicateUserName))
                 ? Problem(StatusCodes.Status409Conflict, "Username taken", "That username already exists.")
@@ -54,7 +55,7 @@ internal static class AuthEndpoints
         await users.AddClaimAsync(user, new Claim(ClaimTypes.GivenName, displayName));
         await signIn.SignInAsync(user, isPersistent: true);
 
-        Telemetry.RecordAuth("register", success: true);
+        telemetry.RecordAuth("register", success: true);
         logger.LogInformation("Registered user {user.name}", username);
 
         return Results.Json(new UserInfo(true, username, displayName), statusCode: StatusCodes.Status201Created);
@@ -63,6 +64,7 @@ internal static class AuthEndpoints
     private static async Task<IResult> LoginAsync(
         LoginRequest request,
         SignInManager<ApplicationUser> signIn,
+        Telemetry telemetry,
         ILogger<ApplicationUser> logger)
     {
         var result = await signIn.PasswordSignInAsync(
@@ -73,7 +75,7 @@ internal static class AuthEndpoints
 
         if (!result.Succeeded)
         {
-            Telemetry.RecordAuth("login", success: false);
+            telemetry.RecordAuth("login", success: false);
             logger.LogWarning("Failed login attempt for {user.name} (locked out: {grot.auth.locked_out})", request.Username, result.IsLockedOut);
 
             return result.IsLockedOut
@@ -81,7 +83,7 @@ internal static class AuthEndpoints
                 : Problem(StatusCodes.Status401Unauthorized, "Invalid credentials", "The username or password is incorrect.");
         }
 
-        Telemetry.RecordAuth("login", success: true);
+        telemetry.RecordAuth("login", success: true);
         logger.LogInformation("User {user.name} logged in", request.Username);
 
         // PasswordSignInAsync has no principal to read back from, so ask the cookie-issuing manager for it.

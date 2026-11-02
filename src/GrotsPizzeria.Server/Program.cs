@@ -106,6 +106,7 @@ if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ServiceTokenIssuer>();
 builder.Services.AddTransient<ServiceTokenHandler>();
+builder.Services.AddSingleton<Telemetry>();
 
 AddService<MenuClient>(builder, "MENU_URL", 8081);
 AddService<OrdersClient>(builder, "ORDERS_URL", 8082);
