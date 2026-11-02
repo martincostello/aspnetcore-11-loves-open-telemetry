@@ -33,7 +33,11 @@ class JwtSettings:
 # Loaded when the module is imported, so the service refuses to start without a valid key.
 settings = JwtSettings.from_environment()
 
-bearer = HTTPBearer(auto_error=False)
+bearer = HTTPBearer(
+    auto_error=False,
+    bearerFormat="JWT",
+    description="A JWT signed (HS256) with the shared `JWT_SIGNING_KEY`, with the expected `iss` and `aud` claims.",
+)
 
 
 class Unauthorized(Exception):

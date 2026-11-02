@@ -16,9 +16,16 @@ internal static class PizzeriaEndpoints
         var api = app.MapGroup("/api");
 
         api.MapGet("/menu", async (MenuClient menu, CancellationToken ct) =>
-            (await menu.GetMenuAsync(ct)).ToHttpResult());
+            (await menu.GetMenuAsync(ct)).ToHttpResult())
+            .WithTags("Menu")
+            .WithSummary("Get the menu")
+            .WithDescription("The pizzas, then the sides, then the desserts, each from cheapest to dearest. The items on special offer have an `offer`, which changes every 5 minutes.")
+            .Produces<IReadOnlyList<MenuItem>>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status502BadGateway);
 
-        var orders = api.MapGroup("/orders").RequireAuthorization();
+        var orders = api.MapGroup("/orders")
+            .RequireAuthorization()
+            .WithTags("Orders");
 
         orders.MapPost("", async (PlaceOrderRequest request, ClaimsPrincipal user, OrdersClient client, CancellationToken ct) =>
         {
@@ -31,16 +38,35 @@ internal static class PizzeriaEndpoints
             return result.IsSuccess
                 ? Results.Json(result.Value, statusCode: StatusCodes.Status201Created)
                 : result.ToHttpResult();
-        });
+        })
+        .WithSummary("Place an order")
+        .WithDescription("Places an order for the signed-in user: it is priced by the menu, paid for by the checkout service and its delivery is started. If any of those fails, so does the order, and the response says why.")
+        .Produces<Order>(StatusCodes.Status201Created)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ProblemResponse>(StatusCodes.Status402PaymentRequired)
+        .Produces<ProblemResponse>(StatusCodes.Status502BadGateway)
+        .Produces<ProblemResponse>(StatusCodes.Status503ServiceUnavailable);
 
         orders.MapGet("", async (ClaimsPrincipal user, OrdersClient client, CancellationToken ct) =>
-            (await client.GetOrdersAsync(UserId(user), ct)).ToHttpResult());
+            (await client.GetOrdersAsync(UserId(user), ct)).ToHttpResult())
+            .WithSummary("List the signed-in user's orders")
+            .WithDescription("Newest first. Only the user's own orders are ever returned.")
+            .Produces<IReadOnlyList<Order>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces<ProblemResponse>(StatusCodes.Status502BadGateway);
 
         orders.MapGet("/{id}", async (string id, ClaimsPrincipal user, OrdersClient client, CancellationToken ct) =>
         {
             var result = await client.GetOrderAsync(id, ct);
             return Owned(result, user) ?? result.ToHttpResult();
-        });
+        })
+        .WithSummary("Get one of the signed-in user's orders")
+        .WithDescription("An order that does not exist and an order that belongs to someone else are both a 404, so ids cannot be probed.")
+        .Produces<Order>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
+        .Produces<ProblemResponse>(StatusCodes.Status502BadGateway);
 
         orders.MapGet("/{id}/tracking", async (string id, ClaimsPrincipal user, OrdersClient orders, DeliveryClient delivery, CancellationToken ct) =>
         {
@@ -51,7 +77,12 @@ internal static class PizzeriaEndpoints
 
             Activity.Current?.SetTag("grot.order.id", id);
             return (await delivery.GetTrackingAsync(id, ct)).ToHttpResult();
-        });
+        })
+        .WithSummary("Track the delivery of one of the signed-in user's orders")
+        .Produces<Tracking>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
+        .Produces<ProblemResponse>(StatusCodes.Status502BadGateway);
 
         return app;
     }

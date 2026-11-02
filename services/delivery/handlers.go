@@ -49,6 +49,7 @@ func newMux(store *Store, auth *Authenticator) http.Handler {
 	})
 	mux.HandleFunc("POST /deliveries", auth.Require(createDelivery(store)))
 	mux.HandleFunc("GET /deliveries/{orderId}", auth.Require(getDelivery(store)))
+	registerDocs(mux)
 	return withRouteAttribute(mux)
 }
 

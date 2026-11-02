@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace GrotsPizzeria.EndToEndTests;
 
 /// <summary>
-/// Special offers: every 5 minutes an item in each section of the menu goes 15% off. Which ones is random, and the stack
+/// Special offers: every 5 minutes an item in each section of the menu goes on offer, at a discount the menu service is configured with. Which ones is random, and the stack
 /// the tests run against has the offers switched off (they would change the totals other tests check), so these tests
 /// give the browser a menu with offers of their own. The menu service has its own tests of choosing them.
 /// </summary>
@@ -13,7 +13,7 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
     private int _menuRequests;
 
     /// <summary>Replaces the menu the browser gets with one where the items <paramref name="onOffer"/> picks have the offer.</summary>
-    private async Task OfferAsync(Func<int, (string Id, DateTimeOffset EndsAt)[]> onOffer) =>
+    private async Task OfferAsync(Func<int, (string Id, DateTimeOffset EndsAt)[]> onOffer, decimal discount = 0.15m) =>
         await Page.RouteAsync("**/api/menu", async route =>
         {
             var response = await route.FetchAsync();
@@ -29,8 +29,8 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
                     var price = (decimal)item!["price"]!;
                     item["offer"] = new JsonObject
                     {
-                        ["discount"] = 0.15,
-                        ["price"] = Math.Round(price * 0.85m, 2, MidpointRounding.AwayFromZero),
+                        ["discount"] = discount,
+                        ["price"] = Math.Round(price * (1 - discount), 2, MidpointRounding.AwayFromZero),
                         ["endsAt"] = offer.EndsAt.ToString("O"),
                     };
                 }
@@ -40,12 +40,24 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
         });
 
     [Fact]
+    public async Task A_Fractional_Discount_Is_Shown_As_It_Is()
+    {
+        await OfferAsync(_ => [("margherita", DateTimeOffset.UtcNow.AddMinutes(5))], discount: 0.125m);
+        await Page.GotoAsync("/menu");
+
+        // 9.50 less 12.5% is 8.31, and it says 12.5% (not 12%)
+        var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
+        await Expect(margherita).ToContainTextAsync("£8.31");
+        await Expect(margherita).ToContainTextAsync("12.5% off");
+    }
+
+    [Fact]
     public async Task Items_On_Special_Offer_Show_Their_Offer_Price()
     {
         await OfferAsync(_ => [("margherita", DateTimeOffset.UtcNow.AddMinutes(5)), ("garlic-bread", DateTimeOffset.UtcNow.AddMinutes(5))]);
         await Page.GotoAsync("/menu");
 
-        // Only the items on offer say so, and show what they cost with 15% off (9.50 becomes 8.08)
+        // Only the items on offer say so, and show what they cost with the discount (the menu given to the browser says 15% off, so 9.50 becomes 8.08)
         var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
         await Expect(margherita).ToContainTextAsync("Special offer");
         await Expect(margherita).ToContainTextAsync("£9.50");

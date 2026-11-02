@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace GrotsPizzeria.EndToEndTests;
@@ -22,18 +24,26 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await PlaceOrderAsync();
         await Expect(Page).ToHaveURLAsync(new Regex(@"/orders/ord_[0-9a-f]+$"));
 
-        // The receipt adds up: 2 x 9.50 + 14.00 + 4.50 = 37.50, plus 8% tax
+        // The receipt adds up: 2 x 9.50 + 14.00 + 4.50 = 37.50, plus tax at the rate the receipt says it was charged at
+        // (whatever the checkout service is configured with)
         await Expect(Page.GetByTestId("page-title")).ToContainTextAsync("Order ord_");
         await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£37.50");
-        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£3.00");
-        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£40.50");
+
+        // (The page rounds the rate to show it, so the exact one is read from the order itself)
+        var orderId = Regex.Match(Page.Url, "ord_[0-9a-f]+").Value;
+        var order = JsonNode.Parse(await (await Page.Context.APIRequest.GetAsync($"/api/orders/{orderId}")).TextAsync())!;
+        var rate = (decimal)order["taxRate"]!;
+        var tax = Math.Round(37.50m * rate, 2, MidpointRounding.AwayFromZero);
+        var total = 37.50m + tax;
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync($"£{tax.ToString("0.00", CultureInfo.InvariantCulture)}");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync($"£{total.ToString("0.00", CultureInfo.InvariantCulture)}");
 
         // ...and the delivery is being tracked
         await Expect(Page.GetByTestId("delivery-step").First).ToContainTextAsync("Preparing your order");
 
         // The order shows up in the history
         await Page.GetByRole(AriaRole.Link, new() { Name = "My orders" }).ClickAsync();
-        await Expect(Page.GetByTestId("order-row").First).ToContainTextAsync("£40.50");
+        await Expect(Page.GetByTestId("order-row").First).ToContainTextAsync($"£{total.ToString("0.00", CultureInfo.InvariantCulture)}");
     }
 
     [Fact]

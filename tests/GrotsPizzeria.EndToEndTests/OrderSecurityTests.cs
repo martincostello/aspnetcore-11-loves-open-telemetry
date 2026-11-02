@@ -212,7 +212,9 @@ public sealed class OrderSecurityTests(PizzeriaFixture fixture) : PizzeriaTest(f
         var subtotal = (decimal)order["subtotal"]!;
         var tax = (decimal)order["tax"]!;
         var total = (decimal)order["total"]!;
-        Assert.True(subtotal > 0 && tax > 0 && total > 0, $"subtotal {subtotal}, tax {tax}, total {total}");
+
+        // There is something to pay for, and there may be no tax on it (a rate of 0 is valid)
+        Assert.True(subtotal > 0 && tax >= 0 && total > 0, $"subtotal {subtotal}, tax {tax}, total {total}");
         Assert.Equal(subtotal + tax, total);
 
         foreach (var line in order["items"]!.AsArray())

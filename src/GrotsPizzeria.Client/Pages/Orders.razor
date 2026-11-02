@@ -1,5 +1,6 @@
 @page "/orders"
 @attribute [Authorize]
+@inject MoneyFormatter Money
 @inject ApiClient Api
 
 <PageTitle>My orders · Grot's Pizzeria</PageTitle>
@@ -38,7 +39,7 @@ else
                         <td><a href="orders/@order.Id" aria-label="View order @order.Id"><code>@order.Id</code></a></td>
                         <td><LocalDateTime Value="order.CreatedAt" /></td>
                         <td>@order.Items.Sum(i => i.Quantity)</td>
-                        <td class="num">@order.Total.Gbp()</td>
+                        <td class="num">@Money.Format(order.Total, order.Currency)</td>
                         <td><span class="tag tag-green">@order.Status</span></td>
                     </tr>
                 }

@@ -13,10 +13,13 @@ const string Propagators = "tracecontext,baggage";
 var jwtKey = builder.AddParameter("jwt-signing-key", () => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), secret: true);
 
 var menu = AddService("grots-menu", "menu", 8081)
-    .WithEnvironment("SPECIAL_OFFERS", builder.Configuration["SPECIAL_OFFERS"] ?? "on");
+    .WithEnvironment("SPECIAL_OFFERS", builder.Configuration["SPECIAL_OFFERS"] ?? "on")
+    .WithEnvironment("OFFER_DISCOUNT", builder.Configuration["OFFER_DISCOUNT"] ?? "")
+    .WithEnvironment("CURRENCY", builder.Configuration["CURRENCY"] ?? "");
 
 var checkout = AddService("grots-checkout", "checkout", 8083)
-    .WithEnvironment("CHECKOUT_FAILURE_RATE", builder.Configuration["CHECKOUT_FAILURE_RATE"] ?? "0.05");
+    .WithEnvironment("CHECKOUT_FAILURE_RATE", builder.Configuration["CHECKOUT_FAILURE_RATE"] ?? "0.05")
+    .WithEnvironment("TAX_RATE", builder.Configuration["TAX_RATE"] ?? "");
 
 var delivery = AddService("grots-delivery", "delivery", 8084);
 
@@ -37,6 +40,7 @@ var browserOtlp = builder.Configuration["BROWSER_OTLP_ENDPOINT"]
     ?? builder.Configuration["DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL"];
 
 var web = builder.AddProject<Projects.GrotsPizzeria_Server>("grots-web")
+    .WithEndpoint("http", endpoint => endpoint.Port = null)
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/healthz")
     .WithOtlpExporter(OtlpProtocol.HttpProtobuf)
@@ -77,7 +81,13 @@ IResourceBuilder<ContainerResource> AddService(string name, string directory, in
         .WithHttpHealthCheck("/healthz")
         .WithEnvironment("JWT_SIGNING_KEY", jwtKey)
         .WithEnvironment("OTEL_PROPAGATORS", Propagators)
-        .WithOtlpExporter(OtlpProtocol.HttpProtobuf);
+        .WithOtlpExporter(OtlpProtocol.HttpProtobuf)
+        .WithCertificateTrustScope(CertificateTrustScope.System)
+        .WithCertificateTrustConfiguration(context =>
+        {
+            context.EnvironmentVariables["OTEL_EXPORTER_OTLP_CERTIFICATE"] = context.CertificateBundlePath;
+            return Task.CompletedTask;
+        });
 
     AlwaysSampleWhenDebugging(service, debugSampler);
     return service;

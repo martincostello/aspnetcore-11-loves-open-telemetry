@@ -29,18 +29,19 @@ flowchart TD
 | Listen port | `PORT` environment variable, defaulting to the port in the diagram above. Listen on all interfaces (`0.0.0.0`). |
 | Downstream URLs | `MENU_URL`, `ORDERS_URL`, `CHECKOUT_URL`, `DELIVERY_URL` (no trailing slash). Defaults are `http://localhost:<port>`. |
 | Health | `GET /healthz` → `200 {"status":"ok"}` (anonymous) |
+| API documentation | `GET /openapi.json` is the OpenAPI document, and `GET /` is a page that shows it (Swagger UI), both anonymous. The BFF's page is at `/swagger`, as its root is the UI. See the README. |
 | Auth | `Authorization: Bearer <jwt>` on everything else, see below |
 | Errors | Non-2xx responses carry `{"title": string, "status": int, "detail": string}` |
 | Service names | `OTEL_SERVICE_NAME` = `grots-web`, `grots-menu`, `grots-orders`, `grots-checkout`, `grots-delivery` |
 | OTLP | Only standard `OTEL_*` environment variables are used for configuration. The compose file sets `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`. |
 | Semconv | `OTEL_SEMCONV_STABILITY_OPT_IN=http` is set for runtimes that need it to emit the stable HTTP semantic conventions. |
-| Money | JSON numbers in GBP (pounds sterling), rounded to 2 decimal places. |
+| Money | JSON numbers rounded to 2 decimal places, in the currency that is given with them (`currency`, an ISO 4217 code such as `GBP`). The menu service decides it (`CURRENCY`, `GBP` by default) and nothing else assumes one. |
 | Timestamps | ISO-8601 UTC (`2026-11-01T10:00:00Z`). |
 
 ## Service-to-service security (JWT)
 
-Every call between applications carries a JWT bearer token (`Authorization: Bearer <jwt>`). Only `GET /healthz` is
-anonymous; every other endpoint of menu, orders, checkout and delivery returns `401` (problem body, `title: "Unauthorized"`)
+Every call between applications carries a JWT bearer token (`Authorization: Bearer <jwt>`). Only `GET /healthz` and the
+API documentation (`GET /` and `GET /openapi.json`) are anonymous; every other endpoint of menu, orders, checkout and delivery returns `401` (problem body, `title: "Unauthorized"`)
 when the token is missing, malformed, expired, or fails validation.
 
 * The BFF (`grots-web`) mints the tokens. For a signed-in user `sub` is the user id; for anonymous browsing it is `anonymous`.
@@ -91,15 +92,16 @@ Server spans of the order endpoints also carry a `grot.order.id` string attribut
 ```json
 [
   {
-    "id": "margherita", "name": "Margherita", "description": "...", "category": "pizza", "price": 9.5, "vegetarian": true, "popular": false, "emoji": "🍕",
+    "id": "margherita", "name": "Margherita", "description": "...", "category": "pizza", "price": 9.5, "currency": "GBP", "vegetarian": true, "popular": false, "emoji": "🍕",
     "offer": { "discount": 0.15, "price": 8.08, "endsAt": "2026-11-01T10:05:00.000Z" }
   }
 ]
 ```
 
-`price` is always the list price. `offer` is `null` unless the item is on **special offer**: every 5 minutes of wall-clock time
+`price` is always the list price, in the `currency` that the item says (as is the offer's price). `offer` is `null` unless the item is on **special offer**: every 5 minutes of wall-clock time
 (10:00:00 to 10:04:59.999, 10:05:00 to 10:09:59.999, ...) one item from each section (one pizza, one side and one dessert) is chosen at random
-and goes 15% off. `offer.price` is the list price less `discount`, to the nearest penny, and `endsAt` is when the period ends.
+and goes on offer. `offer.discount` is the fraction taken off (`0.15`, 15% off, unless the service has `OFFER_DISCOUNT` set to something else), so clients
+show whatever it is rather than assuming a rate. `offer.price` is the list price less `discount`, to the nearest penny, and `endsAt` is when the period ends.
 The same item may be chosen in consecutive periods. The choice is a pure function of the period, so every instance agrees.
 `SPECIAL_OFFERS=off` switches the offers off (every `offer` is `null`).
 
@@ -123,7 +125,8 @@ Prices are what the items cost now, so an item on special offer is priced at its
 ```json
 {
   "lines": [ { "pizzaId": "margherita", "name": "Margherita", "quantity": 2, "unitPrice": 9.5, "lineTotal": 19.0 } ],
-  "subtotal": 19.0
+  "subtotal": 19.0,
+  "currency": "GBP"
 }
 ```
 
@@ -146,8 +149,9 @@ Response:
   "currency": "GBP", "status": "approved" }
 ```
 
-* Tax is 8% of the amount, rounded to 2 decimal places. `total = amount + tax`. `taxRate` is the rate that was applied,
-  as a fraction (`0.08` is 8%).
+* `currency` is required: a 3 letter ISO 4217 code in capitals, which is the currency of `amount` (the one the menu prices things in). The receipt repeats it.
+* Tax is `TAX_RATE` (default `0.08`, 8%) of the amount, rounded to 2 decimal places. `total = amount + tax`. `taxRate` is the rate that
+  was applied, as a fraction (`0.08` is 8%). It is the only place a client learns it, so clients show it from the receipt rather than assuming one.
 * `paymentMethod` is `card` or `cash`. `cardLast4` is required for `card` (4 digits).
 * `402` (`title: "Payment declined"`) when `cardLast4` is `0000`.
 * `503` (`title: "Payment gateway unavailable"`) randomly for a fraction of requests, configured by

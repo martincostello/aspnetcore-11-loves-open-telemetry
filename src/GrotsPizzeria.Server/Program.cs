@@ -93,6 +93,7 @@ builder.Services
         };
     }));
 builder.Services.AddAuthorization();
+builder.Services.AddApiDocumentation();
 
 // Keep the cookie encryption keys somewhere that survives restarts when asked to (the container uses a volume).
 if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
@@ -133,14 +134,25 @@ app.UseAuthorization();
 app.MapGet("/api/config", (IConfiguration configuration) =>
     new ClientConfig(
         configuration["TELEMETRY_URL"] ?? "http://localhost:3000/d/grots-http-semconv",
-        configuration["BROWSER_OTLP_ENDPOINT"]));
+        configuration["BROWSER_OTLP_ENDPOINT"]))
+    .WithTags("Settings")
+    .WithSummary("Get the settings for the UI")
+    .WithDescription("Where the UI's \"See telemetry\" link goes, and where the browser should send its own telemetry (unset means it sends none).");
 
-app.MapGet("/healthz", () => Results.Json(new { status = "ok" }));
+app.MapGet("/healthz", () => Results.Json(new { status = "ok" }))
+    .WithTags("Health")
+    .WithSummary("Check that the service is running")
+    .Produces(StatusCodes.Status200OK);
+
+app.MapOpenApi("/openapi.json");
+app.MapGet("/swagger", () => Results.Redirect("/swagger-ui/index.html")).ExcludeFromDescription();
+app.MapGet("/swagger-ui", () => Results.Redirect("/swagger-ui/index.html")).ExcludeFromDescription();
+
 app.MapAuthEndpoints();
 app.MapPizzeriaEndpoints();
 
 // Unknown /api routes are 404s, not the SPA.
-app.Map("/api/{**path}", () => Results.NotFound());
+app.Map("/api/{**path}", () => Results.NotFound()).ExcludeFromDescription();
 app.MapFallbackToFile("index.html");
 
 app.Run();

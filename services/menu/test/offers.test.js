@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pizzas } from '../src/menu.js';
-import { OFFER_PERIOD_MS, currentOffers, offerPrice } from '../src/offers.js';
+import { OFFER_DISCOUNT, OFFER_PERIOD_MS, checkOffersAreOrderable, currentOffers, offerPrice, parseDiscount } from '../src/offers.js';
 
 const at = (iso) => Date.parse(iso);
 const byId = new Map(pizzas.map((p) => [p.id, p]));
@@ -14,7 +14,8 @@ test('puts one pizza, one side and one dessert on offer', () => {
   assert.deepEqual([...offers.keys()].map(categoryOf).sort(), ['dessert', 'pizza', 'side']);
 });
 
-test('takes 15% off, rounded to the penny', () => {
+test('takes 15% off by default, rounded to the penny', () => {
+  assert.equal(OFFER_DISCOUNT, 0.15);
   for (const offer of currentOffers(at('2026-11-01T10:00:00Z')).values()) {
     assert.equal(offer.discount, 0.15);
   }
@@ -23,6 +24,45 @@ test('takes 15% off, rounded to the penny', () => {
   assert.equal(offerPrice(3), 2.55);
   assert.equal(offerPrice(4.25), 3.61); // 3.6125
   assert.equal(offerPrice(13.75), 11.69); // 11.6875
+});
+
+test('takes whatever discount is configured off, and says what it is', () => {
+  for (const offer of currentOffers(at('2026-11-01T10:00:00Z'), undefined, 0.2).values()) {
+    assert.equal(offer.discount, 0.2);
+  }
+  assert.equal(offerPrice(10, 0.2), 8);
+  assert.equal(offerPrice(9.5, 0.1), 8.55);
+  assert.equal(offerPrice(9.5, 0.15), 8.08);
+});
+
+test('reads the discount from the configuration, which must be a fraction between 0 and 1', () => {
+  assert.equal(parseDiscount(undefined), 0.15);
+  assert.equal(parseDiscount(''), 0.15);
+  assert.equal(parseDiscount(' 0.25 '), 0.25);
+  assert.equal(parseDiscount('0.125'), 0.125);
+  assert.equal(parseDiscount('0.1235'), 0.1235); // the most precision there is: hundredths of a percent
+
+  // 0.12365 would be advertised as 12.365% off but priced at 12.37%, so it is refused
+  for (const bad of ['15', '0', '1', '-0.1', 'half', 'NaN', 'Infinity', '0.12365', '0.00001']) {
+    assert.throws(() => parseDiscount(bad), /OFFER_DISCOUNT/, bad);
+  }
+});
+
+test('refuses a discount that leaves an item on offer for nothing, so that what is advertised can be ordered', () => {
+  const cheapest = Math.min(...pizzas.map((item) => item.price));
+
+  // The cheapest item is 3.00: 0.01% of that is a twentieth of a penny
+  assert.equal(offerPrice(cheapest, 0.9999), 0);
+  assert.throws(() => checkOffersAreOrderable(0.9999), /OFFER_DISCOUNT.*for nothing/);
+  assert.throws(() => checkOffersAreOrderable(0.9984), /for nothing/); // 0.0048 rounds down to nothing
+  assert.doesNotThrow(() => checkOffersAreOrderable(0.9983)); // 0.0051 rounds up to a penny
+  assert.doesNotThrow(() => checkOffersAreOrderable(0.99));
+  assert.doesNotThrow(() => checkOffersAreOrderable()); // the configured discount
+
+  // Every offer that is made is for something
+  for (const offer of currentOffers(at('2026-11-01T10:00:00Z')).values()) {
+    assert.ok(offer.price > 0);
+  }
 });
 
 test('the offers last for 5 minutes of wall-clock time, whenever the service started', () => {

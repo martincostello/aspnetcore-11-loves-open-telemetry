@@ -75,6 +75,8 @@ services:
     build: ./services/menu
     environment:
       <<: [*telemetry, *security]
+      CURRENCY: ${CURRENCY:-}
+      OFFER_DISCOUNT: ${OFFER_DISCOUNT:-}
       OTEL_SERVICE_NAME: grots-menu
       SPECIAL_OFFERS: ${SPECIAL_OFFERS:-on}
     healthcheck:
@@ -109,8 +111,9 @@ services:
     build: ./services/checkout
     environment:
       <<: [*telemetry, *security]
-      OTEL_SERVICE_NAME: grots-checkout
       CHECKOUT_FAILURE_RATE: ${CHECKOUT_FAILURE_RATE:-0.05}
+      OTEL_SERVICE_NAME: grots-checkout
+      TAX_RATE: ${TAX_RATE:-}
     healthcheck:
       <<: *health
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8083/healthz', timeout=3)"]

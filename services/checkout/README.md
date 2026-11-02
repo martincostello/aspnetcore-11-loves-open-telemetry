@@ -2,13 +2,19 @@
 
 Payments for Grot's Pizzeria. Called by `grots-orders` to charge for an order.
 
-* `POST /checkout` – "authorizes" a payment (simulated 50–250ms gateway call), adds 8% tax and returns a receipt.
+* `POST /checkout` – "authorizes" a payment (simulated 50–250ms gateway call), adds tax (8% by default) and returns a receipt.
   `402` when the card ends in `0000`; `503` for a configurable fraction of requests; `400` for invalid input.
 * `GET /healthz` – anonymous; every other endpoint requires a valid JWT (see below).
 
 See [`docs/service-contract.md`](../../docs/service-contract.md) for the full API.
 
 Built with FastAPI, Pydantic and Uvicorn.
+
+## API documentation
+
+The root of the service, <http://localhost:8083>, is a page that shows its OpenAPI document (`/openapi.json`) with Swagger UI, loaded
+from a CDN. It needs no token. FastAPI generates the document from the routes and the Pydantic models, so describe an endpoint with
+the arguments of its decorator (`summary`, `responses`) and a model with `Field(description=...)`. The page is in `app/static`.
 
 ## Telemetry
 
@@ -47,6 +53,7 @@ See the "Service-to-service security" section of the contract. The service refus
 | --- | --- | --- |
 | `PORT` | `8083` | Port to listen on |
 | `CHECKOUT_FAILURE_RATE` | `0.05` | Fraction of requests that fail with `503` (`0` = never) |
+| `TAX_RATE` | `0.08` | The tax added to every payment, as a fraction (`0.08` is 8%), from `0` up to `1`. Each receipt says what it was (`taxRate`). |
 | `JWT_SIGNING_KEY` | _(required)_ | Shared HS256 secret, at least 32 bytes |
 | `JWT_ISSUER` | `grots-web` | Expected `iss` claim |
 | `JWT_AUDIENCE` | `grots-pizzeria` | Expected `aud` claim |
