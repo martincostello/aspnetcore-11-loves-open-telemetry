@@ -101,6 +101,8 @@ start the stack again with its default settings.
 
 - Prices are in pounds sterling (£, GBP).
 - In code, comments and names, say "fake" or "mock" for stand-ins, not "pretend".
+- In C#, put each type in its own file, named after the type (`Foo.cs`, and ``Bar`1.cs`` for `Bar<T>`), including the small
+  models a Razor page uses. Do not suppress analyzer rules to avoid this.
 - Comments explain why, not what, and match the existing style of the file you are editing.
 - Follow `.editorconfig` (2-space indent for most files, 4 for C#, Java and Python, tabs for Go) and `.gitattributes`: **LF line
   endings** everywhere (including `*.ps1`), except `*.cmd` and `*.bat`. Do not commit CRLF files.

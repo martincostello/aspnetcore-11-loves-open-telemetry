@@ -1,11 +1,9 @@
 using GrotsPizzeria.Client;
-using System.Net.Http.Json;
 using GrotsPizzeria.Client.Services;
 using GrotsPizzeria.Shared;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Logging;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 

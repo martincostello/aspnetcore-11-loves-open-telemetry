@@ -1,6 +1,4 @@
 using System.Text.Json.Nodes;
-using Deque.AxeCore.Commons;
-using Deque.AxeCore.Playwright;
 using System.Text.RegularExpressions;
 
 namespace GrotsPizzeria.EndToEndTests;

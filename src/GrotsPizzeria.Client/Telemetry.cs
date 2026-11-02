@@ -2,7 +2,6 @@ using System.Diagnostics;
 using GrotsPizzeria.Client.Services;
 using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;

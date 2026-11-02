@@ -2,11 +2,6 @@ using GrotsPizzeria.Shared;
 
 namespace GrotsPizzeria.Client.Services;
 
-public sealed record CartLine(MenuItem Item, int Quantity)
-{
-    public decimal Total => Item.CurrentPrice * Quantity;
-}
-
 /// <summary>The shopping cart. Lives for the lifetime of the browser tab.</summary>
 public sealed class CartState
 {
