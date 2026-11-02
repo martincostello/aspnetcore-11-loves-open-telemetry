@@ -1,5 +1,7 @@
 # ASP.NET Core 11 💖 OpenTelemetry
 
+[![Build status](https://github.com/martincostello/aspnetcore-11-loves-open-telemetry/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martincostello/aspnetcore-11-loves-open-telemetry/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
+
 _Grot's Pizzeria_ is a sample application demonstrating ASP.NET Core 11's improved support
 for [OpenTelemetry](https://opentelemetry.io) and HTTP Server Semantic Conventions.
 
