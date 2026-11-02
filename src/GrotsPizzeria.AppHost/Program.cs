@@ -79,7 +79,13 @@ IResourceBuilder<ContainerResource> AddService(string name, string directory, in
         .WithHttpHealthCheck("/healthz")
         .WithEnvironment("JWT_SIGNING_KEY", jwtKey)
         .WithEnvironment("OTEL_PROPAGATORS", Propagators)
-        .WithOtlpExporter(OtlpProtocol.HttpProtobuf);
+        .WithOtlpExporter(OtlpProtocol.HttpProtobuf)
+        .WithCertificateTrustScope(CertificateTrustScope.System)
+        .WithCertificateTrustConfiguration(context =>
+        {
+            context.EnvironmentVariables["OTEL_EXPORTER_OTLP_CERTIFICATE"] = context.CertificateBundlePath;
+            return Task.CompletedTask;
+        });
 
     AlwaysSampleWhenDebugging(service, debugSampler);
     return service;
