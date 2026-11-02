@@ -20,6 +20,7 @@ public abstract class PizzeriaTest(PizzeriaFixture fixture) : IAsyncLifetime
         {
             BaseURL = fixture.BaseAddress.ToString(),
             ColorScheme = ColorScheme,
+            Locale = "en-US",
             Permissions = ["clipboard-read", "clipboard-write"],
             ViewportSize = new() { Width = 1280, Height = 900 },
         });

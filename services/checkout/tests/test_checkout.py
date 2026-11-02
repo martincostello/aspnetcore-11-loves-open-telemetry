@@ -55,13 +55,14 @@ def test_tax_is_added_at_the_configured_rate_and_the_receipt_says_what_it_was(mo
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [(None, "0.08"), ("", "0.08"), ("  ", "0.08"), ("0.2", "0.2"), (" 0.125 ", "0.125"), ("0", "0")],
+    [(None, "0.08"), ("", "0.08"), ("  ", "0.08"), ("0.2", "0.2"), (" 0.125 ", "0.125"), ("0", "0"), ("0.06625", "0.06625"), ("0.0124", "0.0124")],
 )
 def test_tax_rate_comes_from_the_configuration(value, expected):
     assert parse_tax_rate(value) == Decimal(expected)
 
 
-@pytest.mark.parametrize("value", ["8", "1", "-0.01", "eight", "NaN", "Infinity"])
+# 0.012399999999999999 is reported as 0.0124 by the receipt, which is a different rate: on 37.50 it is 0.47 tax where 0.46 is charged
+@pytest.mark.parametrize("value", ["8", "1", "-0.01", "eight", "NaN", "Infinity", "0.012399999999999999", "0.1234567890123456789"])
 def test_tax_rate_must_be_a_fraction_from_zero_to_below_one(value):
     with pytest.raises(ValueError, match="TAX_RATE"):
         parse_tax_rate(value)
