@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject IJSRuntime JS
+@inject TimeProvider Time
 
 <time datetime="@Value.UtcDateTime.ToString("O")" title="@_relative">@_text</time>
 
@@ -31,7 +32,7 @@
     // The tooltip's relative time moves on every few seconds; a hover shows whatever it is at that moment.
     private async Task TickAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), Time);
 
         try
         {

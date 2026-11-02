@@ -1,12 +1,6 @@
-using System.Net.Http.Json;
 using GrotsPizzeria.Shared;
 
 namespace GrotsPizzeria.Client.Services;
-
-public sealed record ApiResult<T>(T? Value, ProblemResponse? Problem)
-{
-    public bool IsSuccess => Problem is null;
-}
 
 /// <summary>Typed wrapper over the BFF's <c>/api</c> surface. Failures come back as a <see cref="ProblemResponse"/>.</summary>
 public sealed class ApiClient(HttpClient http)

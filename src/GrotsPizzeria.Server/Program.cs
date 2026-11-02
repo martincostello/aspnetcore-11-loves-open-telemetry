@@ -1,15 +1,14 @@
-using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using GrotsPizzeria.Server;
 using GrotsPizzeria.Server.Auth;
 using GrotsPizzeria.Server.Downstream;
 using GrotsPizzeria.Server.Endpoints;
 using GrotsPizzeria.Shared;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -107,6 +106,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ServiceTokenIssuer>();
 builder.Services.AddTransient<ServiceTokenHandler>();
 builder.Services.AddSingleton<Telemetry>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 AddService<MenuClient>(builder, "MENU_URL", 8081);
 AddService<OrdersClient>(builder, "ORDERS_URL", 8082);
@@ -170,16 +170,5 @@ static async Task InitializeDatabaseAsync(IServiceProvider services)
         var demo = new ApplicationUser { UserName = "grot", DisplayName = "Grot" };
         (await users.CreateAsync(demo, "Grot!Pizza1")).ThrowOnFailure();
         await users.AddClaimAsync(demo, new Claim(ClaimTypes.GivenName, demo.DisplayName));
-    }
-}
-
-file static class IdentityResultExtensions
-{
-    public static void ThrowOnFailure(this IdentityResult result)
-    {
-        if (!result.Succeeded)
-        {
-            throw new InvalidOperationException(string.Join(' ', result.Errors.Select(e => e.Description)));
-        }
     }
 }
