@@ -130,4 +130,6 @@ start the stack again with its default settings.
   release. Give workflow jobs a `name`, and keep the permissions minimal.
 - Dependabot runs weekly on Mondays, and it also updates the Docker images and Compose file.
 - When you add or change a build or test step, update `ci.yml` and `build.ps1` together, so they stay equivalent.
+- A pull request only runs the CI jobs for the parts of the repository it changes: the `changes` job in `ci.yml` decides which,
+  from a filter per job. When you add a job, or move the files a job depends on, update its filter (a push to `main` runs everything).
 - Do not commit, push or open pull requests unless asked to.

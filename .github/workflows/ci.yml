@@ -19,8 +19,96 @@ env:
   JWT_SIGNING_KEY: ci-only-signing-key-0123456789-0123456789
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+
+    permissions:
+      pull-requests: read
+
+    outputs:
+      config: ${{ github.event_name != 'pull_request' || steps.filter.outputs.config == 'true' }}
+      dotnet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.dotnet == 'true' }}
+      e2e: ${{ github.event_name != 'pull_request' || steps.filter.outputs.e2e == 'true' }}
+      go: ${{ github.event_name != 'pull_request' || steps.filter.outputs.go == 'true' }}
+      java: ${{ github.event_name != 'pull_request' || steps.filter.outputs.java == 'true' }}
+      javascript: ${{ github.event_name != 'pull_request' || steps.filter.outputs.javascript == 'true' }}
+      node: ${{ github.event_name != 'pull_request' || steps.filter.outputs.node == 'true' }}
+      python: ${{ github.event_name != 'pull_request' || steps.filter.outputs.python == 'true' }}
+      workflows: ${{ github.event_name != 'pull_request' || steps.filter.outputs.workflows == 'true' }}
+
+    steps:
+      - name: Detect changed files
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4.0.3
+        with:
+          filters: |
+            workflow: &workflow
+              - .github/workflows/actions.lock
+              - .github/workflows/ci.yml
+            dotnet: &dotnet
+              - *workflow
+              - .editorconfig
+              - Directory.Build.props
+              - Directory.Packages.props
+              - global.json
+              - GrotsPizzeria.slnx
+              - src/**
+              - tests/**
+            go: &go
+              - *workflow
+              - services/delivery/**
+            java: &java
+              - *workflow
+              - services/orders/**
+            node: &node
+              - *workflow
+              - services/menu/**
+            python: &python
+              - *workflow
+              - services/checkout/**
+            javascript:
+              - *workflow
+              - .markdownlint-cli2.jsonc
+              - eslint.config.mjs
+              - package.json
+              - package-lock.json
+              - stylelint.config.mjs
+              - '**/*.css'
+              - '**/*.js'
+              - '**/*.md'
+              - '**/*.mjs'
+            workflows:
+              - .github/actionlint-matcher.json
+              - .github/workflows/**
+            config:
+              - *workflow
+              - build.ps1
+              - deploy/**
+              - docker-compose.yml
+              - docker-compose.weaver.yml
+              - weaver/registry/**
+              - services/checkout/app/static/**
+              - services/delivery/static/**
+              - services/menu/public/**
+              - services/orders/src/main/resources/static/**
+              - src/GrotsPizzeria.Client/wwwroot/**
+              - src/GrotsPizzeria.Server/wwwroot/swagger-ui/**
+            e2e:
+              - *dotnet
+              - *go
+              - *java
+              - *node
+              - *python
+              - .dockerignore
+              - docker-compose.yml
+
   dotnet:
     name: .NET (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.dotnet == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
 
@@ -49,6 +137,8 @@ jobs:
 
   go:
     name: Go
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -85,6 +175,8 @@ jobs:
 
   java:
     name: Java
+    needs: changes
+    if: needs.changes.outputs.java == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -116,6 +208,8 @@ jobs:
 
   javascript:
     name: JavaScript
+    needs: changes
+    if: needs.changes.outputs.javascript == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -149,6 +243,8 @@ jobs:
 
   node:
     name: Node.js
+    needs: changes
+    if: needs.changes.outputs.node == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -180,6 +276,8 @@ jobs:
 
   python:
     name: Python
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -214,6 +312,8 @@ jobs:
 
   actionlint:
     name: Lint workflows
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -236,7 +336,8 @@ jobs:
 
   zizmor:
     name: Audit workflows
-    if: ${{ vars.ZIZMOR_ENABLED == 'true' }}
+    needs: changes
+    if: vars.ZIZMOR_ENABLED == 'true' && needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -256,6 +357,8 @@ jobs:
 
   validate:
     name: Validate configuration
+    needs: changes
+    if: needs.changes.outputs.config == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -292,6 +395,8 @@ jobs:
 
   end-to-end:
     name: End-to-end tests
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -321,6 +426,7 @@ jobs:
     name: ci
     needs: [
       actionlint,
+      changes,
       dotnet,
       end-to-end,
       go,
