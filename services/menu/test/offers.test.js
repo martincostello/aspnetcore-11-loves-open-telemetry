@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pizzas } from '../src/menu.js';
-import { OFFER_PERIOD_MS, currentOffers, offerPrice } from '../src/offers.js';
+import { OFFER_DISCOUNT, OFFER_PERIOD_MS, currentOffers, offerPrice, parseDiscount } from '../src/offers.js';
 
 const at = (iso) => Date.parse(iso);
 const byId = new Map(pizzas.map((p) => [p.id, p]));
@@ -14,7 +14,8 @@ test('puts one pizza, one side and one dessert on offer', () => {
   assert.deepEqual([...offers.keys()].map(categoryOf).sort(), ['dessert', 'pizza', 'side']);
 });
 
-test('takes 15% off, rounded to the penny', () => {
+test('takes 15% off by default, rounded to the penny', () => {
+  assert.equal(OFFER_DISCOUNT, 0.15);
   for (const offer of currentOffers(at('2026-11-01T10:00:00Z')).values()) {
     assert.equal(offer.discount, 0.15);
   }
@@ -23,6 +24,25 @@ test('takes 15% off, rounded to the penny', () => {
   assert.equal(offerPrice(3), 2.55);
   assert.equal(offerPrice(4.25), 3.61); // 3.6125
   assert.equal(offerPrice(13.75), 11.69); // 11.6875
+});
+
+test('takes whatever discount is configured off, and says what it is', () => {
+  for (const offer of currentOffers(at('2026-11-01T10:00:00Z'), undefined, 0.2).values()) {
+    assert.equal(offer.discount, 0.2);
+  }
+  assert.equal(offerPrice(10, 0.2), 8);
+  assert.equal(offerPrice(9.5, 0.1), 8.55);
+  assert.equal(offerPrice(9.5, 0.15), 8.08);
+});
+
+test('reads the discount from the configuration, which must be a fraction between 0 and 1', () => {
+  assert.equal(parseDiscount(undefined), 0.15);
+  assert.equal(parseDiscount(''), 0.15);
+  assert.equal(parseDiscount(' 0.25 '), 0.25);
+
+  for (const bad of ['15', '0', '1', '-0.1', 'half', 'NaN', 'Infinity']) {
+    assert.throws(() => parseDiscount(bad), /OFFER_DISCOUNT/, bad);
+  }
 });
 
 test('the offers last for 5 minutes of wall-clock time, whenever the service started', () => {

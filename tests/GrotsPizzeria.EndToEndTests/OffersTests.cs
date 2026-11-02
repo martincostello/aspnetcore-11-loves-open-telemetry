@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace GrotsPizzeria.EndToEndTests;
 
 /// <summary>
-/// Special offers: every 5 minutes an item in each section of the menu goes 15% off. Which ones is random, and the stack
+/// Special offers: every 5 minutes an item in each section of the menu goes on offer, at a discount the menu service is configured with. Which ones is random, and the stack
 /// the tests run against has the offers switched off (they would change the totals other tests check), so these tests
 /// give the browser a menu with offers of their own. The menu service has its own tests of choosing them.
 /// </summary>
@@ -45,7 +45,7 @@ public sealed class OffersTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
         await OfferAsync(_ => [("margherita", DateTimeOffset.UtcNow.AddMinutes(5)), ("garlic-bread", DateTimeOffset.UtcNow.AddMinutes(5))]);
         await Page.GotoAsync("/menu");
 
-        // Only the items on offer say so, and show what they cost with 15% off (9.50 becomes 8.08)
+        // Only the items on offer say so, and show what they cost with the discount (the menu given to the browser says 15% off, so 9.50 becomes 8.08)
         var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
         await Expect(margherita).ToContainTextAsync("Special offer");
         await Expect(margherita).ToContainTextAsync("£9.50");

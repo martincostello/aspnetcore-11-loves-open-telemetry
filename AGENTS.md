@@ -100,6 +100,8 @@ start the stack again with its default settings.
 ### Code
 
 - Prices are in pounds sterling (£, GBP).
+- Do not hard-code the tax rate or the special offer discount outside the service that owns it (`TAX_RATE` in checkout,
+  `OFFER_DISCOUNT` in menu). Clients and tests show or derive them from what the services return (`taxRate`, `offer.discount`).
 - In code, comments and names, say "fake" or "mock" for stand-ins, not "pretend".
 - In C#, put each type in its own file, named after the type (`Foo.cs`, and ``Bar`1.cs`` for `Bar<T>`), including the small
   models a Razor page uses. Do not suppress analyzer rules to avoid this.

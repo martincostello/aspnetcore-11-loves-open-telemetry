@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.payments import calculate_tax
+from app.payments import calculate_tax, parse_tax_rate
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +41,30 @@ def test_approved_card_payment():
     assert result["transactionId"].startswith("txn_")
     assert (result["subtotal"], result["tax"], result["total"]) == (19.0, 1.52, 20.52)
     assert result["taxRate"] == 0.08
+
+
+def test_tax_is_added_at_the_configured_rate_and_the_receipt_says_what_it_was(monkeypatch):
+    monkeypatch.setattr("app.payments.TAX_RATE", Decimal("0.2"))
+    monkeypatch.setattr("app.main.TAX_RATE", Decimal("0.2"))
+
+    result = post(body()).json()
+
+    assert (result["subtotal"], result["tax"], result["total"]) == (19.0, 3.8, 22.8)
+    assert result["taxRate"] == 0.2
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(None, "0.08"), ("", "0.08"), ("  ", "0.08"), ("0.2", "0.2"), (" 0.125 ", "0.125"), ("0", "0")],
+)
+def test_tax_rate_comes_from_the_configuration(value, expected):
+    assert parse_tax_rate(value) == Decimal(expected)
+
+
+@pytest.mark.parametrize("value", ["8", "1", "-0.01", "eight", "NaN", "Infinity"])
+def test_tax_rate_must_be_a_fraction_from_zero_to_below_one(value):
+    with pytest.raises(ValueError, match="TAX_RATE"):
+        parse_tax_rate(value)
 
 
 def test_cash_does_not_need_card():

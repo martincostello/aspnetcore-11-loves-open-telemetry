@@ -6,7 +6,7 @@ app (ES modules, Node.js 26+) with no database: the menu lives in `src/menu.js`.
 | Endpoint | Description |
 | --- | --- |
 | `GET /healthz` | Anonymous health check |
-| `GET /menu` | The full menu, with the items currently on special offer (15% off, a new pizza, side and dessert every 5 minutes) |
+| `GET /menu` | The full menu, with the items currently on special offer (a discount, 15% by default, on a new pizza, side and dessert every 5 minutes) |
 | `GET /menu/{id}` | A single pizza (`404` if unknown) |
 | `POST /menu/price` | Prices a list of `{ pizzaId, quantity }` |
 
@@ -36,6 +36,7 @@ PowerShell: `$env:JWT_SIGNING_KEY = "a-development-key-of-at-least-32-bytes"; np
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(SDK default)_ | e.g. `http://localhost:4318`. Standard `OTEL_*` variables apply. |
 | `OTEL_SERVICE_NAME` | `grots-menu` | |
 | `SPECIAL_OFFERS` | `on` | `off` switches the special offers off, so prices never change (used by the end-to-end tests). |
+| `OFFER_DISCOUNT` | `0.15` | The fraction taken off an item on special offer: `0.15` is 15% off. Above 0 and below 1. It is sent with each offer (`discount`), so clients show whatever it is. |
 
 ## Telemetry
 

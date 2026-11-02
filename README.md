@@ -94,9 +94,10 @@ Sign in as `grot` / `Grot!Pizza1` (or register), add some pizzas, sides and dess
 Use a card ending in `0000` to see a declined payment. About 5% of payments fail with a simulated gateway
 error (`CHECKOUT_FAILURE_RATE` on the checkout service), so you will occasionally see errors without asking for them.
 
-Every 5 minutes a pizza, a side and a dessert, chosen at random, go on **special offer** at 15% off.
+Every 5 minutes a pizza, a side and a dessert, chosen at random, go on **special offer**, 15% off by default.
 The menu highlights them, and the price you are charged is the offer price.
-`SPECIAL_OFFERS=off` on the menu service switches the offers off.
+`SPECIAL_OFFERS=off` on the menu service switches the offers off, and `OFFER_DISCOUNT` sets the discount
+(a fraction: `0.2` is 20% off). The tax on an order is 8% by default; `TAX_RATE` on the checkout service sets it (`0.2` is 20%).
 
 #### Notes
 

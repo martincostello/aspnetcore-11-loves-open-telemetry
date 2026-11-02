@@ -99,7 +99,8 @@ Server spans of the order endpoints also carry a `grot.order.id` string attribut
 
 `price` is always the list price. `offer` is `null` unless the item is on **special offer**: every 5 minutes of wall-clock time
 (10:00:00 to 10:04:59.999, 10:05:00 to 10:09:59.999, ...) one item from each section (one pizza, one side and one dessert) is chosen at random
-and goes 15% off. `offer.price` is the list price less `discount`, to the nearest penny, and `endsAt` is when the period ends.
+and goes on offer. `offer.discount` is the fraction taken off (`0.15`, 15% off, unless the service has `OFFER_DISCOUNT` set to something else), so clients
+show whatever it is rather than assuming a rate. `offer.price` is the list price less `discount`, to the nearest penny, and `endsAt` is when the period ends.
 The same item may be chosen in consecutive periods. The choice is a pure function of the period, so every instance agrees.
 `SPECIAL_OFFERS=off` switches the offers off (every `offer` is `null`).
 
@@ -146,8 +147,8 @@ Response:
   "currency": "GBP", "status": "approved" }
 ```
 
-* Tax is 8% of the amount, rounded to 2 decimal places. `total = amount + tax`. `taxRate` is the rate that was applied,
-  as a fraction (`0.08` is 8%).
+* Tax is `TAX_RATE` (default `0.08`, 8%) of the amount, rounded to 2 decimal places. `total = amount + tax`. `taxRate` is the rate that
+  was applied, as a fraction (`0.08` is 8%). It is the only place a client learns it, so clients show it from the receipt rather than assuming one.
 * `paymentMethod` is `card` or `cash`. `cardLast4` is required for `card` (4 digits).
 * `402` (`title: "Payment declined"`) when `cardLast4` is `0000`.
 * `503` (`title: "Payment gateway unavailable"`) randomly for a fraction of requests, configured by

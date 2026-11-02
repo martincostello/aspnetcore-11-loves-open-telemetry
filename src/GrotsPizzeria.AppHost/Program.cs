@@ -13,10 +13,12 @@ const string Propagators = "tracecontext,baggage";
 var jwtKey = builder.AddParameter("jwt-signing-key", () => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), secret: true);
 
 var menu = AddService("grots-menu", "menu", 8081)
-    .WithEnvironment("SPECIAL_OFFERS", builder.Configuration["SPECIAL_OFFERS"] ?? "on");
+    .WithEnvironment("SPECIAL_OFFERS", builder.Configuration["SPECIAL_OFFERS"] ?? "on")
+    .WithEnvironment("OFFER_DISCOUNT", builder.Configuration["OFFER_DISCOUNT"] ?? "");
 
 var checkout = AddService("grots-checkout", "checkout", 8083)
-    .WithEnvironment("CHECKOUT_FAILURE_RATE", builder.Configuration["CHECKOUT_FAILURE_RATE"] ?? "0.05");
+    .WithEnvironment("CHECKOUT_FAILURE_RATE", builder.Configuration["CHECKOUT_FAILURE_RATE"] ?? "0.05")
+    .WithEnvironment("TAX_RATE", builder.Configuration["TAX_RATE"] ?? "");
 
 var delivery = AddService("grots-delivery", "delivery", 8084);
 
