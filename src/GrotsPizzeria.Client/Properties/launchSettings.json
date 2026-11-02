@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "GrotsPizzeria.Client": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:62784;http://localhost:62785"
+    }
+  }
+}
