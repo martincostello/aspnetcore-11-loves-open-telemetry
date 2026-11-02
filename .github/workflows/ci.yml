@@ -48,6 +48,7 @@ jobs:
             workflow: &workflow
               - .github/workflows/actions.lock
               - .github/workflows/ci.yml
+              - .gitattributes
             dotnet: &dotnet
               - *workflow
               - .editorconfig
