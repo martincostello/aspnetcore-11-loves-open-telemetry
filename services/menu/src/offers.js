@@ -10,7 +10,7 @@ const DEFAULT_OFFER_DISCOUNT = 0.15;
  * The fraction taken off an item on special offer (0.15 is 15% off): OFFER_DISCOUNT, or 0.15 if it is not set (a blank value,
  * as Docker Compose passes for an unset variable, is not set). It is sent to clients with every offer, which show it as they
  * see fit, so nothing else needs to know it. A value that is not above 0 and below 1, or that has more than 4 decimal places (see
- * offerPrice), stops the service starting.
+ * offerPrice), stops the service starting. So does one that leaves an item free (see checkOffersAreOrderable).
  *
  * @param {string | undefined} value
  */
@@ -57,6 +57,24 @@ export const offerPrice = (price, discount = OFFER_DISCOUNT) => {
   const basisPoints = Math.round(discount * 10_000);
   return Math.round((Math.round(price * 100) * (10_000 - basisPoints)) / 10_000) / 100;
 };
+
+/**
+ * Refuses a discount that would make an item on offer cost nothing once its price is rounded to the penny. The offers are
+ * advertised, and an order for only those items would be refused (it could not be charged for nothing), so every item must still
+ * have a price above zero when it is on offer. It stops the service starting, as the other settings that are not valid do.
+ *
+ * @param {number} discount
+ * @param {{ name: string, price: number }[]} items
+ */
+export function checkOffersAreOrderable(discount = OFFER_DISCOUNT, items = pizzas) {
+  const free = items.find((item) => offerPrice(item.price, discount) <= 0);
+
+  if (free) {
+    throw new Error(`OFFER_DISCOUNT of ${discount} would put ${free.name} (${free.price.toFixed(2)}) on offer for nothing: it must leave every item with a price.`);
+  }
+}
+
+checkOffersAreOrderable();
 
 /**
  * The items on special offer at the given time (Date.now() by default): one item from each section of the menu (pizzas and
