@@ -126,8 +126,13 @@ start the stack again with its default settings.
 
 ### Repository and CI
 
-- GitHub Actions are pinned to a full commit SHA with the version in a comment (`uses: owner/repo@<sha> # v1.2.3`), at the latest
-  release. Give workflow jobs a `name`, and keep the permissions minimal.
+- GitHub Actions are referenced by their version tag (`uses: owner/repo@v1.2.3`), at the latest release, and pinned to a commit
+  SHA by the lockfile `.github/workflows/actions.lock`, which GitHub checks against the workflows at run time. Do not put SHAs in
+  the workflows themselves. The lockfile is generated: after you add or update an action, run `gh actions-lock` (the
+  [gh-actions-lock](https://github.com/github/gh-actions-lock) extension) to update it, and commit the two together. Give workflow
+  jobs a `name`, and keep the permissions minimal.
 - Dependabot runs weekly on Mondays, and it also updates the Docker images and Compose file.
 - When you add or change a build or test step, update `ci.yml` and `build.ps1` together, so they stay equivalent.
+- A pull request only runs the CI jobs for the parts of the repository it changes: the `changes` job in `ci.yml` decides which,
+  from a filter per job. When you add a job, or move the files a job depends on, update its filter (a push to `main` runs everything).
 - Do not commit, push or open pull requests unless asked to.
