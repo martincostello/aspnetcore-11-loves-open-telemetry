@@ -1,5 +1,6 @@
 @page "/menu"
 @implements IDisposable
+@inject MoneyFormatter Money
 @inject MenuState State
 @inject CartState Cart
 
@@ -54,17 +55,17 @@ else
                         @if (item.Offer is { } offer)
                         {
                             <span class="price">
-                                <span class="visually-hidden">Special offer, @offer.PercentOff% off. Was @item.Price.Gbp(), now @offer.Price.Gbp()</span>
+                                <span class="visually-hidden">Special offer, @offer.PercentOff% off. Was @Money.Format(item.Price, item.Currency), now @Money.Format(offer.Price, item.Currency)</span>
                                 <span aria-hidden="true">
-                                    <s class="was">@item.Price.Gbp()</s>
-                                    <strong class="now">@offer.Price.Gbp()</strong>
+                                    <s class="was">@Money.Format(item.Price, item.Currency)</s>
+                                    <strong class="now">@Money.Format(offer.Price, item.Currency)</strong>
                                     <span class="off">@offer.PercentOff% off</span>
                                 </span>
                             </span>
                         }
                         else
                         {
-                            <span class="price"><span class="visually-hidden">Price: </span>@item.Price.Gbp()</span>
+                            <span class="price"><span class="visually-hidden">Price: </span>@Money.Format(item.Price, item.Currency)</span>
                         }
                         <button class="btn btn-primary btn-sm" type="button" @onclick="() => Cart.Add(item)">
                             <span>Add to cart<span class="visually-hidden"> @item.Name</span>@(QuantityInCart(item) is > 0 and var q ? $" ({q} in cart)" : "")</span>

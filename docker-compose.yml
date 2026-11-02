@@ -75,6 +75,7 @@ services:
     build: ./services/menu
     environment:
       <<: [*telemetry, *security]
+      CURRENCY: ${CURRENCY:-}
       OFFER_DISCOUNT: ${OFFER_DISCOUNT:-}
       OTEL_SERVICE_NAME: grots-menu
       SPECIAL_OFFERS: ${SPECIAL_OFFERS:-on}

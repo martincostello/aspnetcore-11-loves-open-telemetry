@@ -10,6 +10,16 @@ window.grotsFormat = {
         return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(date);
     },
 
+    // An amount of money in the browser's locale: (9.5, 'GBP') -> "£9.50", or "9,50 £" where that is how it is written.
+    // The currency is an ISO 4217 code that comes from the API; one that Intl does not know is shown as it is.
+    currency(amount, currency) {
+        try {
+            return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+        } catch {
+            return `${amount.toFixed(2)} ${currency}`;
+        }
+    },
+
     // A fraction as a percentage in the browser's locale: 0.08 -> "8%".
     percent(fraction) {
         return new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 2 }).format(fraction);

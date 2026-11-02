@@ -1,6 +1,7 @@
 @page "/cart"
 @attribute [Authorize]
 @implements IDisposable
+@inject MoneyFormatter Money
 @inject CartState Cart
 @inject ApiClient Api
 @inject NavigationManager Navigation
@@ -48,7 +49,7 @@ else
                                 <span role="img" aria-label="Quantity: @line.Quantity">@line.Quantity</span>
                                 <button class="btn btn-secondary btn-sm" type="button" aria-label="Add one more @line.Item.Name" @onclick="() => Cart.Set(line.Item, line.Quantity + 1)"><span aria-hidden="true">+</span></button>
                             </td>
-                            <td class="num">@line.Total.Gbp()</td>
+                            <td class="num">@Money.Format(line.Total, line.Item.Currency)</td>
                             <td class="actions">
                                 <button class="btn btn-secondary btn-sm btn-icon" type="button" id="remove-@line.Item.Id" title="Remove @line.Item.Name from the cart"
                                         aria-label="Remove all @line.Item.Name from your cart" @onclick="() => RemoveAll(line)">
@@ -59,7 +60,7 @@ else
                     }
                 </tbody>
                 <tfoot data-testid="totals">
-                    <tr><td colspan="2">Subtotal (tax is added at checkout)</td><td class="num"><strong>@Cart.Subtotal.Gbp()</strong></td><td></td></tr>
+                    <tr><td colspan="2">Subtotal (tax is added at checkout)</td><td class="num"><strong>@Money.Format(Cart.Subtotal, Cart.Currency)</strong></td><td></td></tr>
                 </tfoot>
             </table>
         </section>
@@ -100,7 +101,7 @@ else
                     }
 
                     <button class="btn btn-primary" type="submit" disabled="@_submitting" aria-busy="@(_submitting ? "true" : "false")">
-                        @(_submitting ? "Placing order..." : $"Place order · {Cart.Subtotal.Gbp()}")
+                        @(_submitting ? "Placing order..." : $"Place order · {Money.Format(Cart.Subtotal, Cart.Currency)}")
                     </button>
                 </EditForm>
             </div>

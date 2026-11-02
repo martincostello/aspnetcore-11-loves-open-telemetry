@@ -52,7 +52,7 @@ public final class Models {
             @Schema(description = "The tax charged.", example = "1.52") BigDecimal tax,
             @Schema(description = "The rate the tax was charged at, as a fraction: 0.08 is 8%.", example = "0.08") BigDecimal taxRate,
             @Schema(description = "What was charged: the subtotal plus the tax.", example = "20.52") BigDecimal total,
-            @Schema(example = "GBP") String currency,
+            @Schema(description = "The ISO 4217 code of the currency of the amounts: the one the menu prices things in.", example = "GBP") String currency,
             @Schema(description = "The payment's transaction.", example = "txn_0123456789ab") String transactionId,
             Instant createdAt) {
     }
@@ -62,7 +62,7 @@ public final class Models {
             String pizzaId,
             String name,
             int quantity,
-            @Schema(description = "What one cost when the order was placed (the offer price, if it was on offer).", example = "9.50")
+            @Schema(description = "What one cost when the order was placed (the offer price, if it was on offer), in the order's currency.", example = "9.50")
             BigDecimal unitPrice,
             @Schema(example = "19.00") BigDecimal lineTotal) {
     }
@@ -79,7 +79,7 @@ public final class Models {
     public record PriceRequest(List<ItemRequest> items) {
     }
 
-    public record PriceResponse(List<OrderLine> lines, BigDecimal subtotal) {
+    public record PriceResponse(List<OrderLine> lines, BigDecimal subtotal, String currency) {
     }
 
     // Downstream: checkout

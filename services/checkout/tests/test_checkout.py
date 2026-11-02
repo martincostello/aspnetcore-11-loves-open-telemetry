@@ -94,6 +94,23 @@ def test_openapi_document_needs_no_token():
     assert "security" not in document["paths"]["/healthz"]["get"]
 
 
+def test_takes_payment_in_the_currency_it_is_asked_for():
+    result = post(body(currency="USD")).json()
+    assert result["currency"] == "USD"
+    assert (result["subtotal"], result["total"]) == (19.0, 20.52)
+
+
+@pytest.mark.parametrize("currency", ["gbp", "POUNDS", "GB", "£", ""])
+def test_the_currency_must_be_an_iso_code(currency):
+    assert post(body(currency=currency)).status_code == 400
+
+
+def test_the_currency_is_required():
+    payload = body()
+    del payload["currency"]
+    assert post(payload).status_code == 400
+
+
 def test_cash_does_not_need_card():
     assert post(body(paymentMethod="cash", cardLast4=None)).status_code == 201
 

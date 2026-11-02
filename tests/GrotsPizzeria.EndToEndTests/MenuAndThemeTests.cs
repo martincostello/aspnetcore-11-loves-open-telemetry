@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace GrotsPizzeria.EndToEndTests;
 
 public sealed class MenuAndThemeTests(PizzeriaFixture fixture) : PizzeriaTest(fixture)
@@ -12,6 +14,30 @@ public sealed class MenuAndThemeTests(PizzeriaFixture fixture) : PizzeriaTest(fi
             var region = Page.GetByRole(AriaRole.Region, new() { Name = section, Exact = true });
             await Expect(region.GetByTestId("menu-item").Filter(new() { HasText = item })).ToBeVisibleAsync();
         }
+    }
+
+    [Fact]
+    public async Task Prices_Are_Shown_In_The_Currency_The_Menu_Says()
+    {
+        // The menu service prices things in pounds unless it is told otherwise, so tell the browser it did
+        await Page.RouteAsync("**/api/menu", async route =>
+        {
+            var response = await route.FetchAsync();
+            var menu = JsonNode.Parse(await response.TextAsync())!.AsArray();
+
+            foreach (var item in menu)
+            {
+                item!["currency"] = "EUR";
+            }
+
+            await route.FulfillAsync(new() { Response = response, Body = menu.ToJsonString() });
+        });
+
+        await Page.GotoAsync("/menu");
+
+        var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
+        await Expect(margherita).ToContainTextAsync("€9.50");
+        await Expect(margherita).Not.ToContainTextAsync("£");
     }
 
     [Fact]

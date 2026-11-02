@@ -60,9 +60,15 @@ class OrderService {
                         "The menu service returned a price that cannot be charged.");
             }
 
+            // The menu says what currency its prices are in, and that is what is charged
+            if (price.currency() == null || price.currency().isBlank()) {
+                throw new ProblemException(HttpStatus.BAD_GATEWAY, "Bad price",
+                        "The menu service did not say what currency the price is in.");
+            }
+
             // 2. Take payment
             CheckoutResponse payment = checkout.charge(new CheckoutRequest(
-                    orderId, price.subtotal(), "GBP",
+                    orderId, price.subtotal(), price.currency(),
                     request.payment().method(), request.payment().cardLast4()));
 
             // 3. Schedule the delivery

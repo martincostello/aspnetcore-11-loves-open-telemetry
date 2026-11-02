@@ -103,7 +103,8 @@ start the stack again with its default settings.
 
 ### Code
 
-- Prices are in pounds sterling (£, GBP).
+- Never assume a currency. The menu service says what its prices are in (`CURRENCY`, which is `GBP` unless configured), every item and
+  quote carries it as `currency`, and the other services and the UI use that: the UI formats amounts with the `currency` it was given.
 - Do not hard-code the tax rate or the special offer discount outside the service that owns it (`TAX_RATE` in checkout,
   `OFFER_DISCOUNT` in menu). Clients and tests show or derive them from what the services return (`taxRate`, `offer.discount`).
 - In code, comments and names, say "fake" or "mock" for stand-ins, not "pretend".

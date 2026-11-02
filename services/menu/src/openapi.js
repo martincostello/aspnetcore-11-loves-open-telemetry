@@ -14,7 +14,7 @@ export const openApiDocument = swaggerJsdoc({
       version: '1.0.0',
       description: [
         "The menu of Grot's Pizzeria: the pizzas, sides and desserts, what they cost, and the special offers that change every",
-        '5 minutes. Prices are in pounds sterling (GBP).',
+        '5 minutes. Every price says which currency it is in (`currency`), which is GBP unless the service is configured otherwise.',
         '',
         'Every endpoint except `/healthz` needs a JWT bearer token, signed with the key shared by the services (HS256, with the',
         'issuer `grots-web` and the audience `grots-pizzeria` unless configured otherwise). `grots-web` mints one for each call it makes.',
@@ -48,13 +48,14 @@ export const openApiDocument = swaggerJsdoc({
         MenuItem: {
           type: 'object',
           description: 'A pizza, side or dessert.',
-          required: ['id', 'name', 'description', 'category', 'price', 'vegetarian', 'popular', 'emoji', 'offer'],
+          required: ['id', 'name', 'description', 'category', 'price', 'currency', 'vegetarian', 'popular', 'emoji', 'offer'],
           properties: {
             id: { type: 'string', example: 'margherita' },
             name: { type: 'string', example: 'Margherita' },
             description: { type: 'string', example: 'San Marzano tomatoes, fresh mozzarella and basil on a blistered crust.' },
             category: { type: 'string', enum: ['pizza', 'side', 'dessert'], example: 'pizza' },
-            price: { type: 'number', format: 'double', example: 9.5, description: 'The list price, in pounds. It does not change when the item is on offer.' },
+            price: { type: 'number', format: 'double', example: 9.5, description: 'The list price, in the `currency`. It does not change when the item is on offer.' },
+            currency: { type: 'string', pattern: '^[A-Z]{3}$', example: 'GBP', description: 'The ISO 4217 code of the currency of the prices of the item, and of its offer.' },
             vegetarian: { type: 'boolean' },
             popular: { type: 'boolean', description: 'Shown with a "Popular" badge.' },
             emoji: { type: 'string', example: '🍕' },
@@ -86,16 +87,17 @@ export const openApiDocument = swaggerJsdoc({
             pizzaId: { type: 'string', example: 'margherita' },
             name: { type: 'string', example: 'Margherita' },
             quantity: { type: 'integer', example: 2 },
-            unitPrice: { type: 'number', format: 'double', example: 9.5, description: 'What one costs now: the offer price if the item is on offer.' },
+            unitPrice: { type: 'number', format: 'double', example: 9.5, description: 'What one costs now, in the `currency` of the quote: the offer price if the item is on offer.' },
             lineTotal: { type: 'number', format: 'double', example: 19 },
           },
         },
         PriceQuote: {
           type: 'object',
-          required: ['lines', 'subtotal'],
+          required: ['lines', 'subtotal', 'currency'],
           properties: {
             lines: { type: 'array', items: { $ref: '#/components/schemas/PriceLine' } },
-            subtotal: { type: 'number', format: 'double', example: 19, description: 'The sum of the lines, before tax.' },
+            subtotal: { type: 'number', format: 'double', example: 19, description: 'The sum of the lines, before tax, in the `currency`.' },
+            currency: { type: 'string', pattern: '^[A-Z]{3}$', example: 'GBP', description: 'The ISO 4217 code of the currency of the amounts.' },
           },
         },
         Problem: {

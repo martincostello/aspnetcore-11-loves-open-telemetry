@@ -1,4 +1,5 @@
 import { pizzas } from './menu.js';
+import { CURRENCY } from './currency.js';
 
 /** Special offers last for 5 minutes of wall-clock time: 10:00:00 to 10:04:59.999, then 10:05:00 to 10:09:59.999, and so on. */
 export const OFFER_PERIOD_MS = 5 * 60 * 1000;
@@ -75,8 +76,8 @@ export function currentOffers(now = Date.now(), items = pizzas, discount = OFFER
 /** The offers to apply right now: none when they are switched off. */
 export const activeOffers = () => (offersEnabled() ? currentOffers() : new Map());
 
-/** The item as the API shows it: with its offer, or `offer: null`. `price` stays the list price. */
-export const withOffer = (item, offers) => ({ ...item, offer: offers.get(item.id) ?? null });
+/** The item as the API shows it: with the currency of its prices, and its offer or `offer: null`. `price` stays the list price. */
+export const withOffer = (item, offers) => ({ ...item, currency: CURRENCY, offer: offers.get(item.id) ?? null });
 
 /** What one of the item costs now. */
 export const currentPrice = (item, offers) => offers.get(item.id)?.price ?? item.price;

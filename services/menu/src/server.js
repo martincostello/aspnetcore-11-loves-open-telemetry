@@ -6,6 +6,7 @@ import { activeOffers, currentPrice, withOffer } from './offers.js';
 import { log } from './logger.js';
 import { requireAuth } from './auth.js';
 import { openApiDocument } from './openapi.js';
+import { CURRENCY } from './currency.js';
 
 const port = Number.parseInt(process.env.PORT ?? '8081', 10);
 
@@ -172,7 +173,7 @@ app.post('/menu/price', requireAuth, json, (req, res) => {
   const subtotal = round2(lines.reduce((sum, line) => sum + line.lineTotal, 0));
   priceQuotes.add(1);
   log.info('Price quote computed', { 'grot.quote.lines': lines.length, 'grot.quote.subtotal': subtotal });
-  res.json({ lines, subtotal });
+  res.json({ lines, subtotal, currency: CURRENCY });
 });
 
 // The OpenAPI document, and the documentation page that shows it (Swagger UI, from a CDN) at the root of the service. Like the

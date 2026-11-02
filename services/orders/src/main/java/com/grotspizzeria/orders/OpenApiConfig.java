@@ -30,7 +30,7 @@ class OpenApiConfig {
                         .description("""
                                 Places and keeps the orders of Grot's Pizzeria. Placing an order prices it with the menu service, takes \
                                 payment from the checkout service and starts its delivery with the delivery service, and fails as a whole \
-                                if any of them does. The orders are kept in memory. Amounts are in pounds sterling (GBP).
+                                if any of them does. The orders are kept in memory. Amounts are in the currency the menu prices things in (`currency`).
 
                                 Every endpoint except `/healthz` needs a JWT bearer token, signed with the key shared by the services (HS256, \
                                 with the issuer `grots-web` and the audience `grots-pizzeria` unless configured otherwise). \

@@ -29,7 +29,7 @@ internal static class OpenApiConfiguration
                         "place orders and track their delivery. It calls the menu, orders, checkout and delivery services on the UI's behalf, " +
                         "and passes their errors on.\n\n" +
                         "Signing in (or registering) sets a cookie, which is what the operations that need a signed-in user check. Amounts are in " +
-                        "pounds sterling (GBP). Everything that is not under `/api` is the UI itself.",
+                        "the currency the menu prices things in, which every price says (`currency`). Everything that is not under `/api` is the UI itself.",
                 };
 
                 document.Tags = new HashSet<OpenApiTag>

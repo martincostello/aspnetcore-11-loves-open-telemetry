@@ -72,6 +72,15 @@ test('describes the API in an OpenAPI document, without a token', async () => {
   assert.ok(document.components.schemas.MenuItem.properties.offer);
 });
 
+test('says what currency the prices are in, for every item and every quote', async () => {
+  const menu = await (await get('/menu')).json();
+  assert.ok(menu.every((item) => item.currency === 'GBP'));
+  assert.equal((await (await get('/menu/margherita')).json()).currency, 'GBP');
+
+  const quote = await (await post(JSON.stringify({ items: [{ pizzaId: 'margherita', quantity: 1 }] }))).json();
+  assert.equal(quote.currency, 'GBP');
+});
+
 test('lists the menu', async () => {
   const items = await (await get('/menu')).json();
   assert.equal(items.length, 30); // 12 pizzas, 12 sides and 6 desserts

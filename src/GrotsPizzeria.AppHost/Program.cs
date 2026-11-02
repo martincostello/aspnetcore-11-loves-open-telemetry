@@ -14,7 +14,8 @@ var jwtKey = builder.AddParameter("jwt-signing-key", () => Convert.ToHexString(R
 
 var menu = AddService("grots-menu", "menu", 8081)
     .WithEnvironment("SPECIAL_OFFERS", builder.Configuration["SPECIAL_OFFERS"] ?? "on")
-    .WithEnvironment("OFFER_DISCOUNT", builder.Configuration["OFFER_DISCOUNT"] ?? "");
+    .WithEnvironment("OFFER_DISCOUNT", builder.Configuration["OFFER_DISCOUNT"] ?? "")
+    .WithEnvironment("CURRENCY", builder.Configuration["CURRENCY"] ?? "");
 
 var checkout = AddService("grots-checkout", "checkout", 8083)
     .WithEnvironment("CHECKOUT_FAILURE_RATE", builder.Configuration["CHECKOUT_FAILURE_RATE"] ?? "0.05")

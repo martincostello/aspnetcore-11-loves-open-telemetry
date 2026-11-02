@@ -15,6 +15,9 @@ public sealed class CartState
 
     public decimal Subtotal => _lines.Sum(l => l.Total);
 
+    /// <summary>The currency of the cart: that of what is in it (the menu prices everything in the same one), or none if it is empty.</summary>
+    public string Currency => _lines.Count > 0 ? _lines[0].Item.Currency : string.Empty;
+
     public void Add(MenuItem item) => Set(item, (_lines.FirstOrDefault(l => l.Item.Id == item.Id)?.Quantity ?? 0) + 1);
 
     public void Set(MenuItem item, int quantity)

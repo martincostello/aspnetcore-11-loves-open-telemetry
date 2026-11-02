@@ -46,7 +46,7 @@ app = FastAPI(
     summary="The checkout service of Grot's Pizzeria.",
     description=(
         "Takes payment for an order: it \"authorizes\" the payment with a fake gateway (which takes 50-250ms, and fails at random "
-        "so that the telemetry is interesting), adds tax, and returns a receipt. Amounts are in pounds sterling (GBP).\n\n"
+        "so that the telemetry is interesting), adds tax, and returns a receipt. Amounts are in the currency of the request.\n\n"
         "Every endpoint except `/healthz` needs a JWT bearer token, signed with the key shared by the services (HS256, with the "
         "issuer `grots-web` and the audience `grots-pizzeria` unless configured otherwise). `grots-orders` passes on the one it was given."
     ),

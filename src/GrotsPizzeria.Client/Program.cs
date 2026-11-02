@@ -29,6 +29,7 @@ builder.Services.AddScoped(_ => new HttpClient(new TracingHandler { InnerHandler
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<CartState>();
 builder.Services.AddScoped<MenuState>();
+builder.Services.AddScoped<MoneyFormatter>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ThemeService>();
 

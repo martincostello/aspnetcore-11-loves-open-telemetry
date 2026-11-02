@@ -19,9 +19,12 @@ class CheckoutRequest(ApiModel):
     order_id: Annotated[str, Field(min_length=1, max_length=64, description="The order being paid for.", examples=["ord_1a2b3c4d5e6f"])]
     amount: Annotated[
         Decimal,
-        Field(gt=0, le=10_000, decimal_places=2, description="What to charge before tax, in pounds.", examples=[19.0]),
+        Field(gt=0, le=10_000, decimal_places=2, description="What to charge before tax, in the currency.", examples=[19.0]),
     ]
-    currency: Annotated[Literal["GBP"], Field(description="Only pounds sterling is accepted.")] = "GBP"
+    currency: Annotated[
+        str,
+        Field(pattern=r"^[A-Z]{3}$", description="The ISO 4217 code of the currency of the amount: the one the menu prices are in.", examples=["GBP"]),
+    ]
     payment_method: Annotated[Literal["card", "cash"], Field(description="How the customer is paying.")]
     card_last4: (
         Annotated[
@@ -51,7 +54,7 @@ class CheckoutResponse(ApiModel):
     tax: Annotated[float, Field(description="The tax charged, to the nearest penny.", examples=[1.52])]
     tax_rate: Annotated[float, Field(description="The rate the tax was charged at, as a fraction: 0.08 is 8%.", examples=[0.08])]
     total: Annotated[float, Field(description="What was charged: the subtotal plus the tax.", examples=[20.52])]
-    currency: str
+    currency: Annotated[str, Field(description="The currency of the amounts: the one that was asked for.", examples=["GBP"])]
     status: Literal["approved"]
 
 
