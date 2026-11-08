@@ -140,6 +140,7 @@ app.MapGet("/api/config", (IConfiguration configuration) =>
     .WithDescription("Where the UI's \"See telemetry\" link goes, and where the browser should send its own telemetry (unset means it sends none).");
 
 app.MapGet("/healthz", () => Results.Json(new { status = "ok" }))
+    .DisableHttpMetrics()
     .WithTags("Health")
     .WithSummary("Check that the service is running")
     .Produces(StatusCodes.Status200OK);

@@ -1,7 +1,7 @@
 {
   "uid": "grots-http-semconv",
   "title": "Grot's Pizzeria: HTTP semantic conventions",
-  "description": "HTTP server and client telemetry (metrics, logs and traces) for every application in Grot's Pizzeria.",
+  "description": "HTTP server and client telemetry (metrics, logs and traces) for every application in Grot's Pizzeria, with notes on what the semantic conventions say about what is shown: open \"How to read this dashboard\".",
   "tags": [
     "grots-pizzeria",
     "opentelemetry",
@@ -84,13 +84,42 @@
   },
   "panels": [
     {
+      "id": 101,
+      "type": "row",
+      "title": "How to read this dashboard",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 100,
+          "type": "text",
+          "title": "How to read this dashboard",
+          "gridPos": {
+            "x": 0,
+            "y": 1,
+            "w": 24,
+            "h": 11
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "**Durations are in seconds.** `http.server.request.duration` and `http.client.request.duration` are histograms in seconds. Grafana writes the unit that suits the value.\n\n**Routes are templates, not URLs.** `http.route` is the route that matched (`/api/orders/{id}`), so there is a series for each route and not for each order. The URL that was asked for is on the spans (`url.path`).\n\n**Only a 5xx is a server error.** The HTTP 5xx rate counts the application failing. A 4xx is the caller's mistake or a correct refusal (a declined payment is a 402), and is not an error for the server that sent it, but it is one for the client that received it: that is why the outbound panels show it and the inbound one does not."
+          }
+        }
+      ]
+    },
+    {
       "id": 1,
       "type": "row",
       "title": "HTTP server (http.server.request.duration)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 1,
         "w": 24,
         "h": 1
       },
@@ -100,14 +129,14 @@
       "id": 2,
       "type": "stat",
       "title": "Requests / s",
-      "description": "Inbound request rate across the selected applications.",
+      "description": "Inbound HTTP requests per second across the selected applications. With All selected this counts service hops, not orders: one order is a request to the BFF and then one each to orders, menu, checkout and delivery, plus the UI polling the tracking. Health checks are not counted: no application records them.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 0,
-        "y": 1,
+        "y": 2,
         "w": 6,
         "h": 4
       },
@@ -156,15 +185,15 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Error rate",
-      "description": "Share of inbound requests answered with a 5xx.",
+      "title": "HTTP 5xx rate",
+      "description": "The share of inbound requests answered with a 5xx status: the application failed. It is not every kind of error. A 4xx is the caller's mistake or a correct refusal, such as the 402 for a declined payment or the 404 for someone else's order, and is not counted, which is also how the semantic conventions treat server spans (only a 5xx makes one an error). See \"Responses by status code\" for the others. Shows 0% once there has been traffic and no failures, and no data until there has been any traffic at all.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 6,
-        "y": 1,
+        "y": 2,
         "w": 6,
         "h": 4
       },
@@ -174,7 +203,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_server_request_duration_seconds_count{service_name=~\"$service\", http_response_status_code=~\"5..\"}[$__rate_interval])) / sum(rate(http_server_request_duration_seconds_count{service_name=~\"$service\"}[$__rate_interval]))",
+          "expr": "(sum(rate(http_server_request_duration_seconds_count{service_name=~\"$service\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_server_request_duration_seconds_count{service_name=~\"$service\"}[$__rate_interval]))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -222,14 +251,14 @@
       "id": 4,
       "type": "stat",
       "title": "p95 latency",
-      "description": "95th percentile of inbound request duration.",
+      "description": "The 95th percentile of http.server.request.duration: 95% of requests were answered at least this quickly. The metric is in seconds. A percentile is worked out from the histogram's buckets, so it needs enough requests in the time range to mean anything: with a handful it is only as good as the bucket it falls in. Generate some traffic with scripts/generate-traffic.ps1.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 12,
-        "y": 1,
+        "y": 2,
         "w": 6,
         "h": 4
       },
@@ -294,7 +323,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 1,
+        "y": 2,
         "w": 6,
         "h": 4
       },
@@ -344,14 +373,14 @@
       "id": 6,
       "type": "timeseries",
       "title": "Requests by application, method and route",
-      "description": "rate(http.server.request.duration) by service.name, http.request.method and http.route.",
+      "description": "rate(http.server.request.duration) by service.name, http.request.method and http.route. The route is the template that matched, such as /api/orders/{id}, and not the URL that was requested, such as /api/orders/ord_1a2b3c4d5e6f. The URL is on the spans, as url.path.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 6,
         "w": 12,
         "h": 9
       },
@@ -400,14 +429,14 @@
       "id": 7,
       "type": "timeseries",
       "title": "Latency percentiles by application",
-      "description": "p50 / p95 / p99 of http.server.request.duration.",
+      "description": "p50 / p95 / p99 of http.server.request.duration, in seconds. The higher the percentile, the more requests it needs to be worked out from: p99 is the slowest 1 in 100, so with fewer than 100 requests it is mostly one request. Generate some traffic (scripts/generate-traffic.ps1) to see the lines settle.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 12,
-        "y": 5,
+        "y": 6,
         "w": 12,
         "h": 9
       },
@@ -476,14 +505,14 @@
       "id": 8,
       "type": "timeseries",
       "title": "Responses by status code",
-      "description": "Inbound requests per second by http.response.status_code.",
+      "description": "Inbound requests per second by http.response.status_code. 2xx is success, 4xx means the request was refused or was wrong (a declined payment is a 402, someone else's order a 404, an order that cannot be placed a 400) and 5xx means the application failed (the checkout gateway being down is a 503 from checkout, and a 502 from orders and the BFF that called it).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 15,
         "w": 12,
         "h": 8
       },
@@ -532,14 +561,14 @@
       "id": 9,
       "type": "timeseries",
       "title": "Slowest routes (p95)",
-      "description": "95th percentile latency by application and route.",
+      "description": "95th percentile of http.server.request.duration, in seconds, by application and http.route (the template, such as /api/orders/{id}, not the URL).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 15,
         "w": 12,
         "h": 8
       },
@@ -591,7 +620,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 23,
         "w": 24,
         "h": 1
       },
@@ -608,7 +637,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 24,
         "w": 12,
         "h": 9
       },
@@ -664,7 +693,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 23,
+        "y": 24,
         "w": 12,
         "h": 9
       },
@@ -713,14 +742,14 @@
       "id": 13,
       "type": "timeseries",
       "title": "Outbound responses by status code",
-      "description": "Outbound requests per second by http.response.status_code (and error.type when there was no response).",
+      "description": "Outbound requests per second by http.response.status_code (and error.type when there was no response). Seen from the caller, a 4xx or 5xx is an error: that is how the semantic conventions treat client spans. The same 402 is a correct answer to the server that gave it, and a failed call to the one that made it.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 33,
         "w": 24,
         "h": 8
       },
@@ -772,7 +801,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 41,
         "w": 24,
         "h": 1
       },
@@ -789,7 +818,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 42,
         "w": 24,
         "h": 10
       },
@@ -819,7 +848,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 51,
+        "y": 52,
         "w": 24,
         "h": 1
       },
@@ -836,7 +865,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 52,
+        "y": 53,
         "w": 12,
         "h": 11
       },
@@ -870,7 +899,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 52,
+        "y": 53,
         "w": 12,
         "h": 11
       },
@@ -904,7 +933,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 63,
+        "y": 64,
         "w": 24,
         "h": 9
       },
@@ -934,7 +963,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 72,
+        "y": 73,
         "w": 24,
         "h": 1
       },
@@ -951,7 +980,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 73,
+        "y": 74,
         "w": 8,
         "h": 8
       },
@@ -1004,7 +1033,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 73,
+        "y": 74,
         "w": 8,
         "h": 8
       },
@@ -1057,7 +1086,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 73,
+        "y": 74,
         "w": 8,
         "h": 8
       },
@@ -1110,7 +1139,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 81,
+        "y": 82,
         "w": 12,
         "h": 10
       },
@@ -1144,7 +1173,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 81,
+        "y": 82,
         "w": 12,
         "h": 10
       },

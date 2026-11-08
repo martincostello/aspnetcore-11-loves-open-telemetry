@@ -122,6 +122,16 @@ def test_declined_card():
     assert response.json()["title"] == "Payment declined"
 
 
+def test_a_card_ending_0503_always_finds_the_gateway_down():
+    response = post(body(cardLast4="0503"))
+    assert response.status_code == 503
+    assert response.json()["title"] == "Payment gateway unavailable"
+
+    # ...but it is only the card: cash and other cards are fine (the random failures are off in these tests)
+    assert post(body(paymentMethod="cash", cardLast4=None)).status_code == 201
+    assert post(body(cardLast4="4242")).status_code == 201
+
+
 def test_gateway_failure(monkeypatch):
     monkeypatch.setenv("CHECKOUT_FAILURE_RATE", "1")
     assert post(body()).status_code == 503

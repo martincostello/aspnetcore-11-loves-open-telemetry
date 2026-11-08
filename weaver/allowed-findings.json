@@ -1,0 +1,118 @@
+{
+  "description": "The Weaver live-check findings of level 'violation' that are known and are not about what Grot's Pizzeria does itself: what the runtimes and the frameworks emit about themselves, which does not match the OpenTelemetry semantic conventions registry (yet). Every other violation fails the check (see tests/GrotsPizzeria.EndToEndTests/WeaverReportTests.cs), so what the sample emits itself (the HTTP server and client telemetry, the database spans, the grot.* signals and the application logs) has to be clean. An allowance is for one thing only, and says why: add to it with care.",
+  "allowances": [
+    {
+      "signal": "metric",
+      "name": "aspnetcore.identity.*",
+      "finding": "missing_attribute",
+      "reason": "ASP.NET Core Identity's own metrics have an attribute (aspnetcore.authentication.is_persistent) that the registry does not have yet.",
+      "emittedBy": ".NET"
+    },
+    {
+      "signal": "metric",
+      "name": "aspnetcore.components.*",
+      "reason": "Blazor's own metrics (what it renders, handles and navigates to), which the UI gets from the framework, are not in the registry yet.",
+      "emittedBy": ".NET (Blazor)"
+    },
+    {
+      "signal": "span",
+      "name": "Event *",
+      "finding": "missing_attribute",
+      "messageMatches": "aspnetcore\\.components\\.",
+      "reason": "Blazor's own spans for the events of a component have attributes (aspnetcore.components.*) that are not in the registry yet.",
+      "emittedBy": ".NET (Blazor)"
+    },
+    {
+      "signal": "span",
+      "name": "Route *",
+      "finding": "missing_attribute",
+      "messageMatches": "aspnetcore\\.components\\.",
+      "reason": "Blazor's own spans for navigating to a component have attributes (aspnetcore.components.*) that are not in the registry yet.",
+      "emittedBy": ".NET (Blazor)"
+    },
+    {
+      "signal": "metric",
+      "name": "dotnet.gc.*",
+      "reason": "The .NET garbage collector's metrics name the generation gc.heap.generation, where the registry says dotnet.gc.heap.generation.",
+      "emittedBy": ".NET"
+    },
+    {
+      "signal": "metric",
+      "name": "http.client.request.time_in_queue",
+      "finding": "missing_metric",
+      "reason": "HttpClient's own metric of how long a request waited for a connection is not in the registry.",
+      "emittedBy": ".NET"
+    },
+    {
+      "signal": "metric",
+      "name": "otlp.exporter.*",
+      "reason": "The OpenTelemetry .NET SDK's metrics about its own OTLP exporter are not in the registry.",
+      "emittedBy": ".NET"
+    },
+    {
+      "signal": "metric",
+      "name": "processedLogs",
+      "reason": "The OpenTelemetry Java SDK's metrics about its own log processors are named in a way that the conventions do not allow.",
+      "emittedBy": "Java"
+    },
+    {
+      "signal": "metric",
+      "name": "processedSpans",
+      "reason": "The OpenTelemetry Java SDK's metrics about its own span processors are named in a way that the conventions do not allow.",
+      "emittedBy": "Java"
+    },
+    {
+      "signal": "metric",
+      "name": "queueSize",
+      "reason": "The OpenTelemetry Java SDK's metric of the size of its own processors' queues is named in a way that the conventions do not allow.",
+      "emittedBy": "Java"
+    },
+    {
+      "signal": "metric",
+      "name": "v8js.memory.heap.*",
+      "finding": "unexpected_instrument",
+      "reason": "Node.js's V8 heap metrics are gauges, where the registry says that they are up-down counters.",
+      "emittedBy": "Node.js"
+    },
+    {
+      "signal": "span",
+      "name": "* http receive",
+      "finding": "missing_attribute",
+      "messageMatches": "asgi\\.event\\.type",
+      "reason": "FastAPI's ASGI instrumentation makes internal spans for the events of a request, with an attribute (asgi.event.type) that is not in the registry.",
+      "emittedBy": "Python"
+    },
+    {
+      "signal": "span",
+      "name": "* http send",
+      "finding": "missing_attribute",
+      "messageMatches": "asgi\\.event\\.type",
+      "reason": "FastAPI's ASGI instrumentation makes internal spans for the events of a request, with an attribute (asgi.event.type) that is not in the registry.",
+      "emittedBy": "Python"
+    },
+    {
+      "signal": "span",
+      "name": "request handler - *",
+      "finding": "missing_attribute",
+      "messageMatches": "express\\.(name|type)",
+      "reason": "Express's instrumentation makes internal spans for its handlers, with attributes (express.name and express.type) that are not in the registry.",
+      "emittedBy": "Node.js"
+    },
+    {
+      "signal": "resource",
+      "name": "*",
+      "finding": "missing_attribute",
+      "messageMatches": "telemetry\\.auto\\.version",
+      "reason": "The Python and Java auto-instrumentation say which version of it made the telemetry, which is not in the registry.",
+      "emittedBy": "Python, Java"
+    },
+    {
+      "signal": "log",
+      "name": "*",
+      "finding": "missing_attribute",
+      "messageMatches": "Attribute '(http|https|urls)' does not exist",
+      "reason": "ASP.NET Core's hosting logs have attributes named for the URLs that the application listens on, which are not in the registry.",
+      "emittedBy": ".NET"
+    }
+  ]
+}

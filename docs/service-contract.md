@@ -28,7 +28,7 @@ flowchart TD
 | --- | --- |
 | Listen port | `PORT` environment variable, defaulting to the port in the diagram above. Listen on all interfaces (`0.0.0.0`). |
 | Downstream URLs | `MENU_URL`, `ORDERS_URL`, `CHECKOUT_URL`, `DELIVERY_URL` (no trailing slash). Defaults are `http://localhost:<port>`. |
-| Health | `GET /healthz` → `200 {"status":"ok"}` (anonymous) |
+| Health | `GET /healthz` → `200 {"status":"ok"}` (anonymous). Health checks are neither traced nor counted in the HTTP metrics by any application. |
 | API documentation | `GET /openapi.json` is the OpenAPI document, and `GET /` is a page that shows it (Swagger UI), both anonymous. The BFF's page is at `/swagger`, as its root is the UI. See the README. |
 | Auth | `Authorization: Bearer <jwt>` on everything else, see below |
 | Errors | Non-2xx responses carry `{"title": string, "status": int, "detail": string}` |
@@ -154,6 +154,8 @@ Response:
   was applied, as a fraction (`0.08` is 8%). It is the only place a client learns it, so clients show it from the receipt rather than assuming one.
 * `paymentMethod` is `card` or `cash`. `cardLast4` is required for `card` (4 digits).
 * `402` (`title: "Payment declined"`) when `cardLast4` is `0000`.
+* `503` (`title: "Payment gateway unavailable"`) when `cardLast4` is `0503`, so that a failure can be had on demand, and for a
+  random fraction of the others (`CHECKOUT_FAILURE_RATE`).
 * `503` (`title: "Payment gateway unavailable"`) randomly for a fraction of requests, configured by
   `CHECKOUT_FAILURE_RATE` (default `0.05`, `0` disables it). This is deliberate: it makes the telemetry interesting.
 * Each request takes a simulated 50–250ms to "talk to the payment gateway".

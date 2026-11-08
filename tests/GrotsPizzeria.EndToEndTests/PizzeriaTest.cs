@@ -1,3 +1,5 @@
+using System.Globalization;
+using GrotsPizzeria.EndToEndTests.Backend;
 using System.Text.RegularExpressions;
 
 namespace GrotsPizzeria.EndToEndTests;
@@ -33,6 +35,25 @@ public abstract class PizzeriaTest(PizzeriaFixture fixture) : IAsyncLifetime
     protected OtlpSink? Sink => fixture.OtlpSink;
 
     protected Uri BaseAddress => fixture.BaseAddress;
+
+    /// <summary>The telemetry backend, if there is one to look at (see <see cref="PizzeriaFixture.Grafana"/>).</summary>
+    protected GrafanaClient? Grafana => fixture.Grafana;
+
+    /// <summary>The symbol of the currency of the menu's prices (see <see cref="PizzeriaFixture.Currency"/>).</summary>
+    protected string CurrencySymbol => fixture.Currency switch
+    {
+        "GBP" => "£",
+        "USD" => "$",
+        "EUR" => "€",
+        "JPY" => "¥",
+        var other => throw new NotSupportedException($"The tests do not know how en-US writes amounts in {other}: add its symbol to PizzeriaTest."),
+    };
+
+    /// <summary>An amount of money as the UI writes it, in the currency of the menu's prices: <c>£9.50</c> for 9.5 in pounds.</summary>
+    protected string Money(decimal amount) => CurrencySymbol + amount.ToString("N2", CultureInfo.InvariantCulture);
+
+    /// <summary>The currency of the menu's prices, as an ISO 4217 code.</summary>
+    protected string Currency => fixture.Currency;
 
     public async ValueTask DisposeAsync()
     {

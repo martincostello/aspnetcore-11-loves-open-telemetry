@@ -23,6 +23,8 @@
       java        PMD and Maven verify                                  (grots-orders)
       dotnet      builds the whole solution, with warnings as errors (as CI does)
       e2e         the Playwright end-to-end tests; they start the whole stack, so they need Docker and take a few minutes
+      telemetry   the telemetry of the whole stack: traffic through Weaver, Grafana and the dashboard's queries, and what they say
+                  (needs Docker, and takes several minutes)
 
     What each step needs installed is in the README (Prerequisites). A step whose tool is missing fails with a message
     saying so; leave it out with -Skip.
@@ -56,10 +58,10 @@
 #>
 [CmdletBinding()]
 param(
-    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e' })]
+    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e', 'telemetry' })]
     [string[]] $Only,
 
-    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e' })]
+    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e', 'telemetry' })]
     [string[]] $Skip,
 
     [string] $Configuration = 'Release',
@@ -130,6 +132,13 @@ function Install-Tooling {
     }
 }
 
+function Install-Chromium {
+    param([string] $Project)
+
+    $playwright = Get-ChildItem -Path (Join-Path $root "$Project/bin/$Configuration") -Recurse -Filter 'playwright.ps1' | Select-Object -First 1
+    Invoke-Native (Get-Process -Id $PID).Path @('-NoProfile', '-File', $playwright.FullName, 'install', 'chromium')
+}
+
 function Get-WorkflowImage {
     param([string] $Pattern)
 
@@ -165,6 +174,7 @@ $steps = [ordered]@{
         Assert-Docker
         Invoke-Native docker @('compose', '-f', 'docker-compose.yml', 'config', '--quiet')
         Invoke-Native docker @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.weaver.yml', 'config', '--quiet')
+        Invoke-Native docker @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.weaver.yml', '-f', 'docker-compose.weaver.report.yml', 'config', '--quiet')
 
         foreach ($file in Get-ChildItem -Path (Join-Path $root 'deploy/grafana/dashboards') -Filter '*.json') {
             $dashboard = Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
@@ -316,10 +326,71 @@ $steps = [ordered]@{
         $project = 'tests/GrotsPizzeria.EndToEndTests'
         Invoke-Native dotnet @('build', $project, '--configuration', $Configuration)
 
-        $playwright = Get-ChildItem -Path (Join-Path $root "$project/bin/$Configuration") -Recurse -Filter 'playwright.ps1' | Select-Object -First 1
-        Invoke-Native (Get-Process -Id $PID).Path @('-NoProfile', '-File', $playwright.FullName, 'install', 'chromium')
+        Install-Chromium $project
 
         Invoke-Native dotnet @('test', '--project', $project, '--configuration', $Configuration, '--no-build')
+    }
+
+    telemetry  = {
+        Assert-Tool 'dotnet' 'Install the .NET SDK in global.json (https://dotnet.microsoft.com/download).'
+        Assert-Docker
+
+        $project = 'tests/GrotsPizzeria.EndToEndTests'
+        Invoke-Native dotnet @('build', $project, '--configuration', $Configuration)
+        Install-Chromium $project
+
+        $compose = @('compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.weaver.yml', '-f', 'docker-compose.weaver.report.yml')
+        $report = Join-Path $root 'weaver/reports/live_check.json'
+        Remove-Item -Path (Join-Path $root 'weaver/reports') -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path (Join-Path $root 'weaver/reports') | Out-Null
+
+        $settings = @{
+            CHECKOUT_FAILURE_RATE = '0'
+            SPECIAL_OFFERS        = 'off'
+            E2E_BASE_URL          = 'http://localhost:8080'
+            E2E_GRAFANA_URL       = 'http://localhost:3000'
+            E2E_WEAVER_REPORT     = 'weaver/reports/live_check.json'
+        }
+        $before = @{}
+
+        foreach ($name in $settings.Keys) {
+            $before[$name] = [Environment]::GetEnvironmentVariable($name)
+            [Environment]::SetEnvironmentVariable($name, $settings[$name])
+        }
+
+        try {
+            Invoke-Native docker ($compose + @('up', '--build', '--wait', '--detach'))
+            Invoke-Native (Get-Process -Id $PID).Path @('-NoProfile', '-File', 'scripts/generate-traffic.ps1', '-Rounds', '10', '-Strict')
+
+            # The applications send their metrics every 15 seconds, and the backend takes a moment to have it all
+            Write-Host 'Waiting for the telemetry to reach the backend...'
+            Start-Sleep -Seconds 40
+
+            # What is in the backend: the dashboard's queries have answers, and a request is one trace through every application
+            Invoke-Native dotnet @(
+                'test', '--project', $project, '--configuration', $Configuration, '--no-build',
+                '--filter-class', 'GrotsPizzeria.EndToEndTests.DashboardQueryTests',
+                '--filter-class', 'GrotsPizzeria.EndToEndTests.TelemetryContractTests')
+
+            # Stop Weaver to write its report
+            Invoke-RestMethod -Method Post -Uri 'http://localhost:4320/stop' | Out-Null
+            $deadline = [DateTime]::UtcNow.AddMinutes(2)
+
+            while (-not (Test-Path -LiteralPath $report) -and [DateTime]::UtcNow -lt $deadline) {
+                Start-Sleep -Seconds 2
+            }
+
+            Start-Sleep -Seconds 3
+            Invoke-Native dotnet @('test', '--project', $project, '--configuration', $Configuration, '--no-build', '--filter-class', 'GrotsPizzeria.EndToEndTests.WeaverReportTests')
+        }
+        finally {
+            foreach ($name in $settings.Keys) {
+                [Environment]::SetEnvironmentVariable($name, $before[$name])
+            }
+            if (-not $env:CI) {
+                Invoke-Native docker @('compose', 'up', '--build', '--wait', '--detach', '--remove-orphans')
+            }
+        }
     }
 }
 

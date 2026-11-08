@@ -91,8 +91,9 @@ docker compose up --build
 
 Sign in as `grot` / `Grot!Pizza1` (or register), add some pizzas, sides and desserts, and place an order.
 
-Use a card ending in `0000` to see a declined payment. About 5% of payments fail with a simulated gateway
-error (`CHECKOUT_FAILURE_RATE` on the checkout service), so you will occasionally see errors without asking for them.
+Use a card ending in `0000` to see a declined payment, or one ending in `0503` to see the payment gateway fail. About 5% of
+payments fail anyway, with a simulated gateway error (`CHECKOUT_FAILURE_RATE` on the checkout service), so you will
+occasionally see errors without asking for them.
 
 Every 5 minutes a pizza, a side and a dessert, chosen at random, go on **special offer**, 15% off by default.
 The menu highlights them, and the price you are charged is the offer price.
@@ -190,17 +191,37 @@ several, or **All**. It shows:
 The dashboard is provisioned from files, so edit the JSON (or `deploy/grafana/dashboards.yaml`) and recreate the `lgtm`
 container to change it.
 
-### What is not traced
+### Making some traffic
 
-Health checks (`GET /healthz`, which Docker Compose and Aspire make every few seconds) are not traced by any of the five services:
+A dashboard of a quiet application is mostly empty. [`scripts/generate-traffic.ps1`](scripts/generate-traffic.ps1) (PowerShell 7) makes the
+same requests every time, through the BFF, one trace each: browsing the menu, orders with a card and with cash, a declined payment (a
+402), a payment gateway that is down (a 502, which is an error), an order that cannot be placed (400), someone else's order (404)
+and a route that is not there. It prints the trace id of each scenario, so one can be found in a dashboard.
 
-- **.NET**: a small sampler drops the server span, as ASP.NET Core's built-in tracing has no setting for it.
+```sh
+pwsh ./scripts/generate-traffic.ps1                                    # 5 rounds
+pwsh ./scripts/generate-traffic.ps1 -Rounds 30 -PauseMilliseconds 1000 # A couple of minutes of traffic, for the dashboard
+```
+
+The statuses are only certain when the checkout service does not fail at random: start the stack with `CHECKOUT_FAILURE_RATE=0` (and
+use `-Strict` to make a status that was not expected an error). The same script makes the traffic for the checks of the telemetry,
+below.
+
+### What is not recorded
+
+Health checks (`GET /healthz`, which Docker Compose and Aspire make every few seconds) are neither traced nor counted in the HTTP
+metrics by any of the five services: they would otherwise be most of what an application that nobody is using reports.
+
+- **.NET**: a small sampler drops the server span, as ASP.NET Core's built-in tracing has no setting for it, and the endpoint is
+  marked with `DisableHttpMetrics()`.
+- **Go**: a filter on `otelhttp`.
+- **Java**: the agent has no setting for this, and records the metrics of a request whatever its sampler decided, so a small extension
+  to the agent supplies a sampler that drops the span, and an exporter that leaves the health checks out of
+  `http.server.request.duration`.
 - **Node.js**: `ignoreIncomingRequestHook` and `ignoreLayers` on the HTTP and Express instrumentation.
 - **Python**: `OTEL_PYTHON_FASTAPI_EXCLUDED_URLS`.
-- **Go**: a filter on `otelhttp`.
-- **Java**: the agent has no setting for this, so a small extension to the agent supplies a sampler that drops them.
 
-The metrics those requests contribute are not removed.
+The checks of the telemetry (below) look for health checks in the backend, and fail if they find any.
 
 ### Context propagation
 
@@ -249,13 +270,33 @@ Each finding has a level: `violation`, `improvement` or `information`. Weaver al
 Grafana: in **Explore → Loki** query `{service_name="weaver"}`.
 
 The signals this sample owns come out with no violations: the HTTP server and client metrics and spans, the database
-spans, the `grot.*` metrics (defined in [weaver/registry](weaver/registry)) and the application logs. What remains is
+spans, the `grot.*` metrics (defined in [weaver/registry](weaver/registry)) and the application logs.What remains is
 mostly improvement-level notes (attributes still at `development` stability) and findings about what the runtimes and
-frameworks themselves emit, such as process and runtime metrics that do not match the registry yet. This shows what real instrumentation of the different runtimes looks like against the conventions. Check the registry on its own with:
+frameworks themselves emit, such as process and runtime metrics that do not match the registry yet. This shows what
+real instrumentation of the different runtimes looks like against the conventions. Check the registry on its own with:
 
 ```sh
 docker run --rm -v "$PWD/weaver/registry:/registry:ro" otel/weaver:v0.28.0 registry check -r /registry
 ```
+
+### Checking the telemetry automatically
+
+`pwsh ./build.ps1 -Only telemetry`, and the **Telemetry** job of CI, run the whole stack with the collector and Weaver in front of Grafana
+(`docker-compose.weaver.yml`, and `docker-compose.weaver.report.yml` for Weaver to write a JSON report), make the same traffic every time
+([`scripts/generate-traffic.ps1`](scripts/generate-traffic.ps1)), and then check, with tests in [tests/GrotsPizzeria.EndToEndTests](tests/GrotsPizzeria.EndToEndTests):
+
+- **Weaver's report** (`WeaverReportTests`): any violation of the semantic conventions fails, unless it is in
+  [`weaver/allowed-findings.json`](weaver/allowed-findings.json), which lists the known findings about what a runtime or a framework
+  emits about itself, each with the reason. CI publishes the report as the `weaver-report` artifact.
+- **The dashboard's queries** (`DashboardQueryTests`): every query of every panel is run against the real Prometheus, Loki and Tempo and has to
+  find something, apart from the two about database failures.
+- **A request is one trace** (`TelemetryContractTests`): looking at the traces in Tempo, an order placed in the browser is one trace through
+  the UI and all five services, each called by the one before it (the parent of a server span is a client span of its caller), with the
+  HTTP method, route and status on each, the browser's baggage on every span, and no health checks. Also when the payment is declined (the
+  servers' spans are not errors, the callers' are) and when the payment gateway is down (all of them are).
+
+To run these against a stack of your own, and not as a step, the tests need `E2E_BASE_URL` and `E2E_GRAFANA_URL` (and `E2E_WEAVER_REPORT`, for
+Weaver's report): see [Running the tests](#running-the-tests).
 
 To keep a report, add `--output=/reports` (and a volume) to the `weaver` command, and `--format=json` for JSON.
 
@@ -291,6 +332,14 @@ $env:E2E_BASE_URL = "http://localhost:8080"; dotnet test tests/GrotsPizzeria.End
 Other settings: `E2E_HEADED=true` shows the browser, and `E2E_BROWSER_CHANNEL=chrome` uses an installed Chrome instead of
 Playwright's Chromium.
 
+The tests expect amounts in the currency of the menu's prices, and start the stack with `CURRENCY=GBP`; against a stack that you started
+they ask the menu what it is. The browser they drive is set to `en-US`.
+
+The tests of the telemetry (`TelemetryContractTests`, `DashboardQueryTests` and `WeaverReportTests`) look at what the applications sent to
+the backend, so they need a Docker Compose stack, and are skipped without one: set `E2E_BASE_URL` to its web app and `E2E_GRAFANA_URL`
+to its Grafana (`http://localhost:3000`, signed in as `admin`/`admin` unless `E2E_GRAFANA_CREDENTIALS` says otherwise). `pwsh ./build.ps1 -Only telemetry`
+does it all, including the stack, the traffic and Weaver's report.
+
 ### Checking everything locally
 
 `build.ps1` runs everything CI does, in one go, so that a change can be verified before it is pushed. It needs PowerShell 7
@@ -316,16 +365,20 @@ pwsh ./build.ps1 -List            # Shows the steps
 | `java` | PMD and `mvnw verify` | JDK 25 |
 | `dotnet` | Builds the solution, with warnings as errors as CI does | The .NET SDK |
 | `e2e` | The Playwright tests, which start the whole stack | The .NET SDK, Docker |
+| `telemetry` | The stack with Weaver, traffic, then the checks of what reached Grafana and of Weaver's report | The .NET SDK, Docker, PowerShell 7 |
 
 ## Repository layout
 
 ```text
 docker-compose.yml          The whole stack + LGTM
 docker-compose.weaver.yml   Adds a collector and Weaver live-check
+docker-compose.weaver.report.yml  Makes Weaver write a JSON report (for the checks of the telemetry)
 docs/service-contract.md    APIs, environment variables, JWT and custom telemetry
 deploy/grafana/             The provisioned dashboard
 deploy/weaver/              The collector configuration for Weaver
 weaver/registry/            Grot's Pizzeria's own semantic conventions
+weaver/allowed-findings.json  The known findings of Weaver's live-check that are not about the sample
+scripts/                    generate-traffic.ps1, the same requests every time
 services/                   Menu (Node.js), orders (Java), checkout (Python), delivery (Go)
 src/GrotsPizzeria.Server/   ASP.NET Core 11 Minimal API: BFF, Identity, JWT minting
 src/GrotsPizzeria.Client/   Blazor WebAssembly UI
@@ -347,3 +400,7 @@ tests/                      Playwright end-to-end tests
   telemetry through a proxy that adds the credentials and validates and rate-limits what it forwards. Leave
   `BROWSER_OTLP_ENDPOINT` unset to turn browser telemetry off.
 - The OTLP exporters' own HTTP calls show up in some services' HTTP client metrics (for example `server.address=lgtm`).
+- **Orders are not transactional.** The orders service prices an order, takes payment, starts the delivery and then keeps the order,
+  in that order, and nothing undoes a step when a later one fails: if the delivery fails after the payment, the customer is told
+  that the order failed, their (fake) payment has been taken, and there is no order to find. A real system would use a saga that
+  refunds (or an outbox), with an idempotency key on the payment so that trying again is safe.

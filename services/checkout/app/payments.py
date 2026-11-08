@@ -73,6 +73,10 @@ async def authorize(method: str, card_last4: str | None) -> str:
     if method == "card" and card_last4 == "0000":
         raise PaymentDeclined()
 
+    # Likewise a gateway that is down, for tests and demos of what a failure looks like (the random failures below are not repeatable)
+    if method == "card" and card_last4 == "0503":
+        raise GatewayUnavailable()
+
     if random.random() < failure_rate():
         raise GatewayUnavailable()
 

@@ -115,7 +115,7 @@ public sealed class OrderSecurityTests(PizzeriaFixture fixture) : PizzeriaTest(f
         var text = await Page.GetByTestId("content").InnerTextAsync();
         Assert.DoesNotContain("Loki Lane", text);
         Assert.DoesNotContain("txn_", text);
-        Assert.DoesNotContain("£", text);
+        Assert.DoesNotContain(CurrencySymbol, text);
 
         // And it is not in their list of orders
         await Page.GotoAsync("/orders");
