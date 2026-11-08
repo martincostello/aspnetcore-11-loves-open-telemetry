@@ -26,6 +26,13 @@ public sealed class TraceData(IReadOnlyList<TraceSpan> spans)
     /// <summary>The spans with no parent in the trace: where it starts.</summary>
     public IEnumerable<TraceSpan> Roots => Spans.Where(s => ParentOf(s) is null);
 
+    /// <summary>
+    /// Whether everything that was sent for the trace has arrived, as far as can be told: each of the applications has its server span for its route,
+    /// and every span has its parent (so that there is one place where the trace starts, and not spans waiting for a parent that has not arrived).
+    /// </summary>
+    public bool IsComplete(IEnumerable<(string Service, string Route)> servers) =>
+        Roots.Count() == 1 && servers.All(s => Spans.Any(x => x.IsServer && x.Service == s.Service && x.Attribute("http.route") == s.Route));
+
     /// <summary>The one server span of the application for the route (the template, such as <c>/orders/{id}</c>).</summary>
     public TraceSpan Server(string service, string route) =>
         Single($"server span of {service} for {route}", s => s.IsServer && s.Service == service && s.Attribute("http.route") == route);

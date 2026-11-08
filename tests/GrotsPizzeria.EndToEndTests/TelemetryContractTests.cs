@@ -21,8 +21,16 @@ public sealed class TelemetryContractTests(PizzeriaFixture fixture) : PizzeriaTe
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan SettleForWhatIsNotThere = TimeSpan.FromSeconds(8);
 
-    private static readonly string[] AllServices = ["grots-web", "grots-orders", "grots-menu", "grots-checkout", "grots-delivery"];
-    private static readonly string[] ServicesUpToThePayment = ["grots-web", "grots-orders", "grots-menu", "grots-checkout"];
+    // The server span that each application has for an order (the route that it reports), in the order that they are called
+    private static readonly (string Service, string Route)[] ServersUpToThePayment =
+    [
+        ("grots-web", "/api/orders/"),
+        ("grots-orders", "/orders"),
+        ("grots-menu", "/menu/price"),
+        ("grots-checkout", "/checkout"),
+    ];
+
+    private static readonly (string Service, string Route)[] AllServers = [.. ServersUpToThePayment, ("grots-delivery", "/deliveries")];
 
     [Fact]
     public async Task An_Order_That_Is_Placed_In_The_Browser_Is_One_Trace_Through_Every_Application()
@@ -55,7 +63,9 @@ public sealed class TelemetryContractTests(PizzeriaFixture fixture) : PizzeriaTe
 
         var trace = await grafana.WaitForTraceAsync(
             traceId,
-            t => t.Services.IsSupersetOf(["grots-ui", .. AllServices]),
+            t => t.IsComplete(AllServers) &&
+                t.Roots.All(r => r.Service == "grots-ui") &&
+                t.Spans.Any(x => x.Service == "grots-ui" && x.Name == "place order"),
             Timeout,
             TimeSpan.Zero,
             TestContext.Current.CancellationToken);
@@ -85,7 +95,7 @@ public sealed class TelemetryContractTests(PizzeriaFixture fixture) : PizzeriaTe
         var (response, sent) = await PlaceOrderThroughTheApiAsync(client, "4242");
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        var trace = await grafana.WaitForTraceAsync(sent.TraceId, t => t.Services.IsSupersetOf(AllServices), Timeout, TimeSpan.Zero, TestContext.Current.CancellationToken);
+        var trace = await grafana.WaitForTraceAsync(sent.TraceId, t => t.IsComplete(AllServers), Timeout, TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         // The BFF carried on the trace that the caller sent, as a child of the span that the caller said it was in
         var web = trace.Server("grots-web", "/api/orders/");
@@ -104,7 +114,7 @@ public sealed class TelemetryContractTests(PizzeriaFixture fixture) : PizzeriaTe
         var (response, sent) = await PlaceOrderThroughTheApiAsync(client, "0000");
         Assert.Equal(HttpStatusCode.PaymentRequired, response.StatusCode);
 
-        var trace = await grafana.WaitForTraceAsync(sent.TraceId, t => t.Services.IsSupersetOf(ServicesUpToThePayment), Timeout, SettleForWhatIsNotThere, TestContext.Current.CancellationToken);
+        var trace = await grafana.WaitForTraceAsync(sent.TraceId, t => t.IsComplete(ServersUpToThePayment), Timeout, SettleForWhatIsNotThere, TestContext.Current.CancellationToken);
 
         // The delivery was never started: the payment came before it
         Assert.DoesNotContain("grots-delivery", trace.Services);
@@ -138,7 +148,7 @@ public sealed class TelemetryContractTests(PizzeriaFixture fixture) : PizzeriaTe
         var (response, sent) = await PlaceOrderThroughTheApiAsync(client, "0503");
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
 
-        var trace = await grafana.WaitForTraceAsync(sent.TraceId, t => t.Services.IsSupersetOf(ServicesUpToThePayment), Timeout, SettleForWhatIsNotThere, TestContext.Current.CancellationToken);
+        var trace = await grafana.WaitForTraceAsync(sent.TraceId, t => t.IsComplete(ServersUpToThePayment), Timeout, SettleForWhatIsNotThere, TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain("grots-delivery", trace.Services);
 
@@ -174,14 +184,20 @@ public sealed class TelemetryContractTests(PizzeriaFixture fixture) : PizzeriaTe
             "tempo",
             $"/api/search?q={Uri.EscapeDataString("{ span.http.route = \"/healthz\" || span.url.path = \"/healthz\" }")}&limit=5&start={start.ToUnixTimeSeconds()}&end={end.ToUnixTimeSeconds()}",
             cancellationToken);
-        Assert.Empty(spans?["traces"]?.AsArray() ?? []);
+
+        // A missing endpoint is not an empty answer: the search has to have been answered (with no matches, as it is expected to be)
+        Assert.NotNull(spans);
+        Assert.Empty(spans["traces"]?.AsArray() ?? []);
 
         var metrics = await grafana.QueryAsync(
             "prometheus",
             $"/api/v1/query?query={Uri.EscapeDataString("sum by (service_name) (increase(http_server_request_duration_seconds_count{http_route=\"/healthz\"}[3m]))")}",
             cancellationToken);
 
-        foreach (var series in metrics?["data"]?["result"]?.AsArray() ?? [])
+        var counted = metrics?["data"]?["result"]?.AsArray();
+        Assert.NotNull(counted);
+
+        foreach (var series in counted)
         {
             Assert.True(double.Parse((string)series!["value"]![1]!, System.Globalization.CultureInfo.InvariantCulture) == 0, $"{series["metric"]} counted health checks.");
         }
