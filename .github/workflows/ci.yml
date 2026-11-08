@@ -453,6 +453,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v6.0.0
 
