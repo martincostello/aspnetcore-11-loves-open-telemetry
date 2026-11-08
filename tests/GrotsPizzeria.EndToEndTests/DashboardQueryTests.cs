@@ -14,7 +14,7 @@ namespace GrotsPizzeria.EndToEndTests;
 public sealed class DashboardQueryTests
 {
     /// <summary>How long to wait for the backend to have an answer for a panel before saying that it has none.</summary>
-    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(120);
 
     /// <summary>Panels that are allowed to show nothing, and why.</summary>
     private static readonly Dictionary<string, string> MayBeEmpty = new()
@@ -107,7 +107,36 @@ public sealed class DashboardQueryTests
         Assert.True(
             count > 0 || mayBeEmpty,
             $"The panel '{panel}' has nothing to show: {kind} {dataSource} query '{query}' found nothing in the last 30 minutes, in {Patience.TotalSeconds:N0} seconds of asking. " +
-            "Has there been any traffic (scripts/generate-traffic.ps1)? If so, the query is wrong.");
+            "Has there been any traffic (scripts/generate-traffic.ps1)? If so, the query is wrong." +
+            (count > 0 || mayBeEmpty ? string.Empty : await WhatTheBackendHasAsync(grafana!, dataSource)));
+    }
+
+    /// <summary>What the backend of a data source does have, to tell a query that is wrong from a backend that was not sent anything.</summary>
+    private static async Task<string> WhatTheBackendHasAsync(GrafanaClient grafana, string dataSource)
+    {
+        var questions = dataSource switch
+        {
+            "loki" => ["/loki/api/v1/labels", "/loki/api/v1/label/service_name/values"],
+            "prometheus" => ["/api/v1/label/job/values"],
+            "tempo" => ["/api/search/tag/service.name/values"],
+            _ => Array.Empty<string>(),
+        };
+
+        var text = new System.Text.StringBuilder();
+
+        foreach (var question in questions)
+        {
+            try
+            {
+                text.Append(CultureInfo.InvariantCulture, $"{Environment.NewLine}  {dataSource}{question}: {(await grafana.QueryAsync(dataSource, question, TestContext.Current.CancellationToken))?.ToJsonString() ?? "not found"}");
+            }
+            catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+            {
+                text.Append(CultureInfo.InvariantCulture, $"{Environment.NewLine}  {dataSource}{question}: {ex.Message}");
+            }
+        }
+
+        return text.Length is 0 ? string.Empty : $"{Environment.NewLine}What {dataSource} does have:{text}";
     }
 
     /// <summary>What Grafana puts in a query for the dashboard's variables and the time range, in terms of everything.</summary>

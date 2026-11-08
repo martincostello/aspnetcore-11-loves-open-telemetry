@@ -385,7 +385,7 @@ $steps = [ordered]@{
         }
         catch {
             Write-Host '--- docker compose logs tail ---'
-            & docker ($compose + @('logs', '--no-color', '--tail', '60', 'lgtm', 'otelcol', 'web')) 2>&1 | Write-Host
+            & docker ($compose + @('logs', '--no-color', '--tail', '150', 'lgtm', 'otelcol')) 2>&1 | Write-Host
             throw
         }
         finally {

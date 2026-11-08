@@ -4,6 +4,11 @@
 #   docker compose -f docker-compose.yml -f docker-compose.weaver.yml -f docker-compose.weaver.report.yml up --build --wait -d
 
 services:
+  lgtm:
+    environment:
+      ENABLE_LOGS_LOKI: "true"
+      ENABLE_LOGS_OTELCOL: "true"
+
   weaver:
     user: "0:0"
     command:

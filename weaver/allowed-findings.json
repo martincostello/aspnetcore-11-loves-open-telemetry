@@ -109,6 +109,21 @@
     {
       "signal": "log",
       "name": "*",
+      "messageMatches": "KeyId",
+      "reason": "ASP.NET Core Data Protection logs a warning, with the id of the key (KeyId) that it created, the first time that it runs with no keys (such as a new volume, or CI). The attribute is not in the registry.",
+      "emittedBy": ".NET"
+    },
+    {
+      "signal": "log",
+      "name": "*",
+      "finding": "missing_event",
+      "messageMatches": "NoXMLEncryptorConfiguredKeyMayBePersistedToStorageInUnencryptedForm",
+      "reason": "ASP.NET Core Data Protection warns that its keys are stored without encryption, which is the case for the sample's volume, and its named events are not in the registry.",
+      "emittedBy": ".NET"
+    },
+    {
+      "signal": "log",
+      "name": "*",
       "finding": "missing_attribute",
       "messageMatches": "Attribute '(http|https|urls)' does not exist",
       "reason": "ASP.NET Core's hosting logs have attributes named for the URLs that the application listens on, which are not in the registry.",
