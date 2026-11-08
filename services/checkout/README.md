@@ -3,7 +3,7 @@
 Payments for Grot's Pizzeria. Called by `grots-orders` to charge for an order.
 
 * `POST /checkout` – "authorizes" a payment (simulated 50–250ms gateway call), adds tax (8% by default) and returns a receipt.
-  `402` when the card ends in `0000`; `503` for a configurable fraction of requests; `400` for invalid input.
+  `402` when the card ends in `0000`; `503` when it ends in `0503`, and for a configurable fraction of requests; `400` for invalid input.
 * `GET /healthz` – anonymous; every other endpoint requires a valid JWT (see below).
 
 See [`docs/service-contract.md`](../../docs/service-contract.md) for the full API.

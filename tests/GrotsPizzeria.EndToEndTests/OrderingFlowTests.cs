@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
@@ -27,7 +26,7 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         // The receipt adds up: 2 x 9.50 + 14.00 + 4.50 = 37.50, plus tax at the rate the receipt says it was charged at
         // (whatever the checkout service is configured with)
         await Expect(Page.GetByTestId("page-title")).ToContainTextAsync("Order ord_");
-        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£37.50");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync(Money(37.50m));
 
         // (The page rounds the rate to show it, so the exact one is read from the order itself)
         var orderId = Regex.Match(Page.Url, "ord_[0-9a-f]+").Value;
@@ -35,15 +34,15 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         var rate = (decimal)order["taxRate"]!;
         var tax = Math.Round(37.50m * rate, 2, MidpointRounding.AwayFromZero);
         var total = 37.50m + tax;
-        await Expect(Page.GetByTestId("totals")).ToContainTextAsync($"£{tax.ToString("0.00", CultureInfo.InvariantCulture)}");
-        await Expect(Page.GetByTestId("totals")).ToContainTextAsync($"£{total.ToString("0.00", CultureInfo.InvariantCulture)}");
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync(Money(tax));
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync(Money(total));
 
         // ...and the delivery is being tracked
         await Expect(Page.GetByTestId("delivery-step").First).ToContainTextAsync("Preparing your order");
 
         // The order shows up in the history
         await Page.GetByRole(AriaRole.Link, new() { Name = "My orders" }).ClickAsync();
-        await Expect(Page.GetByTestId("order-row").First).ToContainTextAsync($"£{total.ToString("0.00", CultureInfo.InvariantCulture)}");
+        await Expect(Page.GetByTestId("order-row").First).ToContainTextAsync(Money(total));
     }
 
     [Fact]
@@ -113,7 +112,7 @@ public sealed class OrderingFlowTests(PizzeriaFixture fixture) : PizzeriaTest(fi
         await Page.GetByRole(AriaRole.Button, new() { Name = "Remove all Margherita from your cart" }).ClickAsync();
         await Expect(rows).ToHaveCountAsync(2);
         await Expect(rows.Filter(new() { HasText = "Margherita" })).ToHaveCountAsync(0);
-        await Expect(Page.GetByTestId("totals")).ToContainTextAsync("£23.00"); // Grot Special £14.00 + 2 x Garlic Bread £4.50
+        await Expect(Page.GetByTestId("totals")).ToContainTextAsync(Money(23.00m)); // Grot Special 14.00 + 2 x Garlic Bread 4.50
         await Expect(Page.GetByTestId("cart-count")).ToHaveTextAsync("3");
 
         // ...and the rest, one at a time, until the cart is empty

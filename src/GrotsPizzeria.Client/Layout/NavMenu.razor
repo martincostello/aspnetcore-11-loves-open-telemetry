@@ -10,8 +10,12 @@
     {
         <li class="nav-divider" aria-hidden="true"></li>
         <li>
-            <a class="nav-item" href="@_telemetryUrl" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="See telemetry (opens in a new tab)">
-                <Icon Name="telemetry" /><span>See telemetry</span><span class="nav-external" aria-hidden="true"><Icon Name="external" /></span>
+            <a class="nav-item" href="@_telemetryUrl" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="See telemetry in @_provider (opens in a new tab)">
+                <Icon Name="telemetry" /><span>See telemetry</span>
+                <span class="nav-trailing" aria-hidden="true">
+                    <img class="nav-provider" src="@ProviderLogo" alt="" data-testid="telemetry-provider" data-provider="@_provider" />
+                    <span class="nav-external"><Icon Name="external" /></span>
+                </span>
             </a>
         </li>
     }
@@ -19,7 +23,15 @@
 
 @code {
     private string? _telemetryUrl;
+    private TelemetryProvider _provider;
 
-    protected override async Task OnInitializedAsync() =>
-        _telemetryUrl = (await Api.GetConfigAsync()).Value?.TelemetryUrl;
+    // The logo of the product that the link goes to
+    private string ProviderLogo => _provider is TelemetryProvider.Aspire ? "img/lang/aspire.svg" : "img/lang/grafana.svg";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var config = (await Api.GetConfigAsync()).Value;
+        _telemetryUrl = config?.TelemetryUrl;
+        _provider = config?.TelemetryProvider ?? TelemetryProvider.Grafana;
+    }
 }

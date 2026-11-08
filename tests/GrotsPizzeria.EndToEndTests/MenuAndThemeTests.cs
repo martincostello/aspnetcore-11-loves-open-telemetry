@@ -21,7 +21,9 @@ public sealed class MenuAndThemeTests(PizzeriaFixture fixture) : PizzeriaTest(fi
     [InlineData("JPY", "¥9.50")] // a currency that is usually written without decimals is still the amount that is charged
     public async Task Prices_Are_Shown_In_The_Currency_The_Menu_Says(string currency, string expected)
     {
-        // The menu service prices things in pounds unless it is told otherwise, so tell the browser it did
+        // The browser is told that the menu prices things in another currency than the stack does
+        Assert.SkipWhen(currency == Currency, "The stack's own currency would not be a change.");
+
         await Page.RouteAsync("**/api/menu", async route =>
         {
             var response = await route.FetchAsync();
@@ -39,7 +41,7 @@ public sealed class MenuAndThemeTests(PizzeriaFixture fixture) : PizzeriaTest(fi
 
         var margherita = Page.GetByTestId("menu-item").Filter(new() { HasText = "Margherita" });
         await Expect(margherita).ToContainTextAsync(expected);
-        await Expect(margherita).Not.ToContainTextAsync("£");
+        await Expect(margherita).Not.ToContainTextAsync(CurrencySymbol);
     }
 
     [Fact]

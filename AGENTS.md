@@ -33,14 +33,15 @@ Run everything CI runs with the PowerShell 7 script in the repository root (it w
 pwsh ./build.ps1                  # every step; Docker must be running
 pwsh ./build.ps1 -Skip e2e        # everything except the slow end-to-end tests
 pwsh ./build.ps1 -Only go,python  # just some steps
-pwsh ./build.ps1 -List            # the steps: markdown, javascript, workflows, config, docs, go, python, node, java, dotnet, e2e
+pwsh ./build.ps1 -List            # the steps: markdown, javascript, workflows, config, docs, go, python, node, java, dotnet, e2e, telemetry
 ```
 
 The script's help and the README (Prerequisites) list what each step needs. The toolchain versions are pinned by `global.json`,
 `package.json`, `go.mod`, `pom.xml`, `requirements*.txt` and the Dockerfiles.
 
 Before you finish, run the steps for the code you changed, plus `markdown` if you touched a Markdown file. A change to a
-service, the BFF, the UI or the Compose file also needs `e2e`. CI treats warnings as errors for .NET (it sets `CI=true`).
+service, the BFF, the UI or the Compose file also needs `e2e`, and one to the telemetry (what is emitted, the dashboard, the Weaver files)
+also needs `telemetry`. CI treats warnings as errors for .NET (it sets `CI=true`).
 
 The linters are the usual ones for each language, with their default or recommended rules. Fix what they report rather than
 disabling rules:
@@ -80,7 +81,11 @@ start the stack again with its default settings.
 - Configure the SDKs with the standard `OTEL_*` environment variables, and make the defaults work. In code, set only what an
   environment variable cannot (for example the browser, which has none).
 - Export OTLP over `http/protobuf`, and send it to the LGTM container by default.
-- Health checks are not traced. Context is propagated with W3C Trace Context and Baggage.
+- Health checks are neither traced nor counted in the metrics, by any application. Context is propagated with W3C Trace Context and Baggage.
+- The checks of the telemetry (`build.ps1 -Only telemetry`, and the Telemetry job of CI) run the stack with Weaver and make traffic with
+  `scripts/generate-traffic.ps1`. A violation of the semantic conventions fails them unless it is about what a runtime or a framework emits about
+  itself and is in `weaver/allowed-findings.json` with a reason: do not add the sample's own signals there, fix them. The dashboard's panels
+  have to find something; the traces of an order have to be one trace through every application.
 - The sample's own attributes and metrics are defined in `weaver/registry`. When you add or change telemetry, update the
   registry and the dashboard, and check the result with the Weaver live-check described in the README.
 - The OTLP endpoint in the Compose stack is unauthenticated, which is only acceptable for a local sample. Do not add real

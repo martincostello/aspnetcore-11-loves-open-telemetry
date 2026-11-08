@@ -2,6 +2,7 @@ using System.Diagnostics;
 using GrotsPizzeria.Client.Services;
 using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Diagnostics.Tracing;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -40,6 +41,10 @@ public static class Telemetry
             options.HttpClientFactory = () => new HttpClient(new KeepAliveHandler { InnerHandler = new HttpClientHandler() });
         }
 
+        // Which meters and activity sources to listen to is in wwwroot/appsettings.json ("Metrics:EnabledMetrics" and "Tracing:EnabledTracing")
+        builder.Services.AddMetrics();
+        builder.Services.AddTracing(tracing => tracing.AddConfiguration(builder.Configuration.GetSection("Tracing")));
+
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
                 .AddService("grots-ui", serviceNamespace: "grots-pizzeria")
@@ -53,20 +58,18 @@ public static class Telemetry
                 }
 
                 // What Blazor does with components (built in), plus our own spans: UI actions and HTTP client calls (TracingHandler)
-                tracing
-                    .AddSource("Microsoft.AspNetCore.Components", "Microsoft.AspNetCore.Components.Lifecycle", Name)
-                    .AddOtlpExporter(options =>
-                    {
-                        Configure(options, "traces");
+                tracing.AddOtlpExporter(options =>
+                {
+                    Configure(options, "traces");
 
-                        // Send spans quickly: the browser's spans are the parents of the server's, and until they arrive the
-                        // backend shows the server's spans in a trace with no root, which they never get if the page is closed first.
-                        // (The default is every 5 seconds.)
-                        options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 250;
-                    });
+                    // Send spans quickly: the browser's spans are the parents of the server's, and until they arrive the
+                    // backend shows the server's spans in a trace with no root, which they never get if the page is closed first.
+                    // (The default is every 5 seconds.)
+                    options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 250;
+                });
             })
             .WithMetrics(metrics => metrics
-                .AddMeter("System.Net.Http", "System.Net.NameResolution", "Microsoft.AspNetCore.Components", "Microsoft.AspNetCore.Components.Lifecycle")
+                .SetExemplarFilter(ExemplarFilterType.TraceBased)
                 .AddOtlpExporter((options, reader) =>
                 {
                     Configure(options, "metrics");
@@ -88,13 +91,10 @@ public static class Telemetry
     }
 
     /// <summary>
-    /// A Blazor WebAssembly host does not run hosted services, which is how the SDK normally starts itself,
-    /// so ask the SDK to do what its hosted service would have done (this is what starts the exporters).
+    /// Keeps hold of the providers, so that the page can flush them as it goes away, and sets up that flush.
     /// </summary>
     public static WebAssemblyHost StartTelemetry(this WebAssemblyHost host)
     {
-        host.Services.GetRequiredService<ITelemetryHostInitializer>().Initialize();
-
         _tracerProvider = host.Services.GetService<TracerProvider>();
         _meterProvider = host.Services.GetService<MeterProvider>();
         _loggerProvider = host.Services.GetService<LoggerProvider>();

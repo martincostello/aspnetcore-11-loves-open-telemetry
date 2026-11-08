@@ -1,0 +1,28 @@
+# Adds to docker-compose.weaver.yml: Weaver writes its findings as a JSON report to ./weaver/reports when it is stopped (POST
+# http://localhost:4320/stop), and stops by itself after a short silence, for a run that checks the telemetry (see build.ps1 -Only telemetry).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.weaver.yml -f docker-compose.weaver.report.yml up --build --wait -d
+
+services:
+  lgtm:
+    environment:
+      ENABLE_LOGS_LOKI: "true"
+      ENABLE_LOGS_OTELCOL: "true"
+
+  weaver:
+    user: "0:0"
+    command:
+      - registry
+      - live-check
+      - --registry=/registry
+      - --include-unreferenced
+      - --otlp-grpc-address=0.0.0.0
+      - --otlp-grpc-port=4317
+      - --admin-port=4320
+      - --inactivity-timeout=120
+      - --format=json
+      - --output=/reports
+      - --emit-otlp-logs
+      - --otlp-logs-endpoint=http://lgtm:4317
+    volumes:
+      - ./weaver/reports:/reports

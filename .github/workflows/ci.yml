@@ -36,6 +36,7 @@ jobs:
       javascript: ${{ github.event_name != 'pull_request' || steps.filter.outputs.javascript == 'true' }}
       node: ${{ github.event_name != 'pull_request' || steps.filter.outputs.node == 'true' }}
       python: ${{ github.event_name != 'pull_request' || steps.filter.outputs.python == 'true' }}
+      telemetry: ${{ github.event_name != 'pull_request' || steps.filter.outputs.telemetry == 'true' }}
       workflows: ${{ github.event_name != 'pull_request' || steps.filter.outputs.workflows == 'true' }}
 
     steps:
@@ -98,7 +99,7 @@ jobs:
               - services/orders/src/main/resources/static/**
               - src/GrotsPizzeria.Client/wwwroot/**
               - src/GrotsPizzeria.Server/wwwroot/swagger-ui/**
-            e2e:
+            e2e: &e2e
               - *dotnet
               - *go
               - *java
@@ -106,6 +107,14 @@ jobs:
               - *python
               - .dockerignore
               - docker-compose.yml
+            telemetry:
+              - *e2e
+              - build.ps1
+              - deploy/**
+              - docker-compose.weaver.report.yml
+              - docker-compose.weaver.yml
+              - scripts/**
+              - weaver/**
 
   dotnet:
     name: .NET (${{ matrix.os }})
@@ -380,6 +389,7 @@ jobs:
         run: |
           docker compose -f docker-compose.yml config --quiet
           docker compose -f docker-compose.yml -f docker-compose.weaver.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.weaver.yml -f docker-compose.weaver.report.yml config --quiet
 
       - name: Validate Grafana dashboard
         run: |
@@ -427,6 +437,43 @@ jobs:
       - name: Test
         run: dotnet test --project tests/GrotsPizzeria.EndToEndTests --configuration Release --no-build
 
+  telemetry:
+    name: Telemetry
+    needs: changes
+    if: needs.changes.outputs.telemetry == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6.0.0
+
+      - name: Check telemetry
+        shell: pwsh
+        run: ./build.ps1 -Only telemetry
+
+      - name: Upload Weaver report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: weaver-report
+          path: weaver/reports/
+          if-no-files-found: ignore
+
   ci:
     name: ci
     needs: [
@@ -439,6 +486,7 @@ jobs:
       javascript,
       node,
       python,
+      telemetry,
       validate,
       zizmor
       ]

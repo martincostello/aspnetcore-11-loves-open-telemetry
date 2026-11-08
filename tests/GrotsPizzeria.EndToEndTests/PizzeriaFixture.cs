@@ -1,5 +1,7 @@
+using System.Text.Json.Nodes;
 using Aspire.Hosting;
 using Aspire.Hosting.Testing;
+using GrotsPizzeria.EndToEndTests.Backend;
 
 namespace GrotsPizzeria.EndToEndTests;
 
@@ -22,19 +24,32 @@ public sealed class PizzeriaFixture : IAsyncLifetime
 
     public Uri BaseAddress { get; private set; } = default!;
 
+    /// <summary>The currency the menu's prices are in: the tests expect amounts in it, whatever it is (see <c>PizzeriaTest.Money</c>).</summary>
+    public string Currency { get; private set; } = default!;
+
     /// <summary>Where the browser sends its telemetry when the tests start the stack themselves (otherwise <see langword="null"/>).</summary>
     public OtlpSink? OtlpSink => _otlpSink;
 
     public IBrowser Browser { get; private set; } = default!;
+
+    /// <summary>The telemetry backend of the stack that is being tested, when the tests have been told about one (E2E_GRAFANA_URL).</summary>
+    public GrafanaClient? Grafana { get; private set; }
 
     public async ValueTask InitializeAsync()
     {
         // The first load of a Blazor WebAssembly app is slow on a cold start.
         Assertions.SetDefaultExpectTimeout(30_000);
 
+        Grafana = GrafanaClient.FromEnvironment();
+
         if (Environment.GetEnvironmentVariable("E2E_BASE_URL") is { Length: > 0 } external)
         {
             BaseAddress = new Uri(external);
+
+            // The stack was started by someone else, with whatever currency they chose: ask it
+            using var http = new HttpClient { BaseAddress = BaseAddress };
+            var menu = JsonNode.Parse(await http.GetStringAsync("/api/menu"))!.AsArray();
+            Currency = (string)menu[0]!["currency"]!;
         }
         else
         {
@@ -42,6 +57,10 @@ public sealed class PizzeriaFixture : IAsyncLifetime
 
             // The checkout service randomly fails some payments by design; keep the tests deterministic.
             Environment.SetEnvironmentVariable("CHECKOUT_FAILURE_RATE", "0");
+
+            // The prices are in pounds unless the menu service is told otherwise, which these tests are not about: say so.
+            Currency = "GBP";
+            Environment.SetEnvironmentVariable("CURRENCY", Currency);
 
             // Likewise the special offers that change the prices every 5 minutes (the tests that look at them provide their own menu).
             Environment.SetEnvironmentVariable("SPECIAL_OFFERS", "off");
@@ -77,6 +96,7 @@ public sealed class PizzeriaFixture : IAsyncLifetime
         }
 
         _playwright?.Dispose();
+        Grafana?.Dispose();
 
         if (_app is not null)
         {
