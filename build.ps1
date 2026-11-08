@@ -383,6 +383,11 @@ $steps = [ordered]@{
             Start-Sleep -Seconds 3
             Invoke-Native dotnet @('test', '--project', $project, '--configuration', $Configuration, '--no-build', '--filter-class', 'GrotsPizzeria.EndToEndTests.WeaverReportTests')
         }
+        catch {
+            Write-Host '--- docker compose logs tail ---'
+            & docker ($compose + @('logs', '--no-color', '--tail', '60', 'lgtm', 'otelcol', 'web')) 2>&1 | Write-Host
+            throw
+        }
         finally {
             foreach ($name in $settings.Keys) {
                 [Environment]::SetEnvironmentVariable($name, $before[$name])

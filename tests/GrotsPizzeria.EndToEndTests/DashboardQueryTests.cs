@@ -13,6 +13,9 @@ namespace GrotsPizzeria.EndToEndTests;
 /// </summary>
 public sealed class DashboardQueryTests
 {
+    /// <summary>How long to wait for the backend to have an answer for a panel before saying that it has none.</summary>
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(60);
+
     /// <summary>Panels that are allowed to show nothing, and why.</summary>
     private static readonly Dictionary<string, string> MayBeEmpty = new()
     {
@@ -55,37 +58,55 @@ public sealed class DashboardQueryTests
         using var grafana = GrafanaClient.FromEnvironment();
         Assert.SkipUnless(grafana is not null, "This asks the backend of a running Docker Compose stack: set E2E_GRAFANA_URL (see the README).");
 
-        var end = DateTimeOffset.UtcNow;
-        var start = end.AddMinutes(-30);
         var text = Uri.EscapeDataString(Substitute(query));
         var seconds = (DateTimeOffset t) => t.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
 
-        // The question that the panel asks, and where in the answer that it is a list of what was found
-        var (path, answer) = kind switch
+        // The backend takes a while to make what it was sent available to queries, and for different amounts of time for logs,
+        // for traces and for the metrics that are made from them (more so on a busy machine, such as a CI runner that has just
+        // started everything), so a panel is asked until it has an answer, and only has nothing to show if it never does.
+        // Panels that may be empty are asked once.
+        var deadline = DateTime.UtcNow + (mayBeEmpty ? TimeSpan.Zero : Patience);
+        var count = 0;
+
+        while (true)
         {
-            "instant" => ($"/api/v1/query?query={text}&time={seconds(end)}", "data.result"),
-            "range" => ($"/api/v1/query_range?query={text}&start={seconds(start)}&end={seconds(end)}&step=60", "data.result"),
-            "logs" => ($"/loki/api/v1/query_range?query={text}&limit=5&start={seconds(start)}000000000&end={seconds(end)}000000000", "data.result"),
-            "spans" => ($"/api/search?q={text}&limit=5&start={seconds(start)}&end={seconds(end)}", "traces"),
-            "span-metrics" => ($"/api/metrics/query_range?q={text}&start={seconds(start)}&end={seconds(end)}&step=60s", "series"),
-            _ => throw new NotSupportedException(kind),
-        };
+            var end = DateTimeOffset.UtcNow;
+            var start = end.AddMinutes(-30);
 
-        var json = await grafana!.QueryAsync(dataSource, path, TestContext.Current.CancellationToken);
-        Assert.NotNull(json);
+            // The question that the panel asks, and where in the answer that it is a list of what was found
+            var (path, answer) = kind switch
+            {
+                "instant" => ($"/api/v1/query?query={text}&time={seconds(end)}", "data.result"),
+                "range" => ($"/api/v1/query_range?query={text}&start={seconds(start)}&end={seconds(end)}&step=60", "data.result"),
+                "logs" => ($"/loki/api/v1/query_range?query={text}&limit=5&start={seconds(start)}000000000&end={seconds(end)}000000000", "data.result"),
+                "spans" => ($"/api/search?q={text}&limit=5&start={seconds(start)}&end={seconds(end)}", "traces"),
+                "span-metrics" => ($"/api/metrics/query_range?q={text}&start={seconds(start)}&end={seconds(end)}&step=60s", "series"),
+                _ => throw new NotSupportedException(kind),
+            };
 
-        JsonNode? found = json;
+            var json = await grafana!.QueryAsync(dataSource, path, TestContext.Current.CancellationToken);
+            Assert.NotNull(json);
 
-        foreach (var name in answer.Split('.'))
-        {
-            found = found?[name];
+            JsonNode? found = json;
+
+            foreach (var name in answer.Split('.'))
+            {
+                found = found?[name];
+            }
+
+            count = found?.AsArray().Count ?? 0;
+
+            if (count > 0 || DateTime.UtcNow >= deadline)
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
         }
-
-        var count = found?.AsArray().Count ?? 0;
 
         Assert.True(
             count > 0 || mayBeEmpty,
-            $"The panel '{panel}' has nothing to show: {kind} {dataSource} query '{query}' found nothing in the last 30 minutes. " +
+            $"The panel '{panel}' has nothing to show: {kind} {dataSource} query '{query}' found nothing in the last 30 minutes, in {Patience.TotalSeconds:N0} seconds of asking. " +
             "Has there been any traffic (scripts/generate-traffic.ps1)? If so, the query is wrong.");
     }
 
