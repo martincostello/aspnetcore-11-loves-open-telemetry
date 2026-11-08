@@ -54,6 +54,7 @@ services:
       # published port, as seen from the browser; LGTM's collector allows cross-origin requests from http:// pages.
       BROWSER_OTLP_ENDPOINT: ${BROWSER_OTLP_ENDPOINT:-http://localhost:4318}
       # Where the "See telemetry" link in the UI's sidebar goes.
+      TELEMETRY_PROVIDER: Grafana
       TELEMETRY_URL: http://localhost:3000/d/grots-http-semconv
       # Opt in to the stable database semantic conventions.
       OTEL_SEMCONV_STABILITY_OPT_IN: database

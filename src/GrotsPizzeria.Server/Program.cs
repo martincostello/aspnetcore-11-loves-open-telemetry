@@ -129,15 +129,16 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Settings for the UI: where its "See telemetry" link goes (the provisioned Grafana dashboard by default),
-// and where the browser should send its own OTLP (unset means the browser sends no telemetry).
+// Settings for the UI: where its "See telemetry" link goes (the provisioned Grafana dashboard by default) and which
+// product that is, and where the browser should send its own OTLP (unset means the browser sends no telemetry).
 app.MapGet("/api/config", (IConfiguration configuration) =>
     new ClientConfig(
         configuration["TELEMETRY_URL"] ?? "http://localhost:3000/d/grots-http-semconv",
-        configuration["BROWSER_OTLP_ENDPOINT"]))
+        configuration["BROWSER_OTLP_ENDPOINT"],
+        Enum.TryParse<TelemetryProvider>(configuration["TELEMETRY_PROVIDER"], ignoreCase: true, out var provider) ? provider : TelemetryProvider.Grafana))
     .WithTags("Settings")
     .WithSummary("Get the settings for the UI")
-    .WithDescription("Where the UI's \"See telemetry\" link goes, and where the browser should send its own telemetry (unset means it sends none).");
+    .WithDescription("Where the UI's \"See telemetry\" link goes and which product that is (Grafana or Aspire), and where the browser should send its own telemetry (unset means it sends none).");
 
 app.MapGet("/healthz", () => Results.Json(new { status = "ok" }))
     .DisableHttpMetrics()

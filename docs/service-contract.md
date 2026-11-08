@@ -248,7 +248,7 @@ ASP.NET Core Identity (EF Core + SQLite). A demo user `grot` / `Grot!Pizza1` is 
 | `POST /api/auth/login` | no | SQLite |
 | `POST /api/auth/logout` | yes | — |
 | `GET  /api/auth/me` | no | — (`{ "isAuthenticated": bool, "username"?, "displayName"? }`) |
-| `GET  /api/config` | no | — (`{ "telemetryUrl": string, "otlpEndpoint"?: string }`: where the UI's "See telemetry" link goes, and where the browser sends its OTLP) |
+| `GET  /api/config` | no | — (`{ "telemetryUrl": string, "otlpEndpoint"?: string, "telemetryProvider": "Grafana" \| "Aspire" }`: where the UI's "See telemetry" link goes and whose logo it shows (`TELEMETRY_PROVIDER`, Grafana by default), and where the browser sends its OTLP) |
 | `GET  /api/menu` | no | menu `GET /menu` |
 | `POST /api/orders` | yes | orders `POST /orders` (adds `userId`/`userName`) |
 | `GET  /api/orders` | yes | orders `GET /orders?userId=` |

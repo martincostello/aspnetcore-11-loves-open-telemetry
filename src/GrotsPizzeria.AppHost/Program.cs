@@ -50,6 +50,7 @@ var web = builder.AddProject<Projects.GrotsPizzeria_Server>("grots-web")
     .WithEnvironment("MENU_URL", menu.GetEndpoint("http"))
     .WithEnvironment("ORDERS_URL", orders.GetEndpoint("http"))
     .WithEnvironment("DELIVERY_URL", delivery.GetEndpoint("http"))
+    .WithEnvironment("TELEMETRY_PROVIDER", "Aspire")
     .WithEnvironment("TELEMETRY_URL", builder.Configuration["ASPNETCORE_URLS"]?.Split(';')[0] ?? "http://localhost:15140") // the Aspire dashboard
     .WaitFor(orders);
 
