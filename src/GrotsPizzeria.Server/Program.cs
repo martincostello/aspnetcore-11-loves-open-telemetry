@@ -7,8 +7,10 @@ using GrotsPizzeria.Shared;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.Tracing;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -37,21 +39,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 // OpenTelemetry:
 // ASP.NET Core and .NET emit spans and metrics using the OpenTelemetry semantic conventions natively, so the
-// SDK only needs to be told which sources to listen to. The one exception is EF Core, which has no built-in tracing.
+// SDK only needs to be told which sources to listen to, which appsettings.json does ("Metrics:EnabledMetrics" and
+// "Tracing:EnabledTracing"). The one exception is EF Core, which has no built-in tracing, so it is added in code.
 // The exporter is configured entirely from the standard OTEL_* environment variables
 // (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_PROTOCOL, OTEL_SERVICE_NAME, ...).
+builder.Services.AddMetrics();
+builder.Services.AddTracing(tracing => tracing.AddConfiguration(builder.Configuration.GetSection("Tracing")));
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("grots-web"))
     .WithTracing(tracing => tracing
         .SetSampler(new HealthCheckSampler(ConfiguredSampler.Create(builder.Configuration)))
-        .AddSource("Microsoft.AspNetCore")
-        .AddSource("System.Net.Http")
         .AddProcessor<BaggageActivityProcessor>()
         .AddEntityFrameworkCoreInstrumentation())
-    .WithMetrics(metrics => metrics
-        .AddMeter("Microsoft.AspNetCore.*")
-        .AddMeter("System.Net.Http", "System.Net.NameResolution", "System.Runtime")
-        .AddMeter(Telemetry.Name))
+    .WithMetrics(metrics => metrics.SetExemplarFilter(ExemplarFilterType.TraceBased))
     .WithLogging(logging => logging.AddProcessor(new DropOriginalFormatProcessor()), options =>
     {
         options.IncludeFormattedMessage = true;
