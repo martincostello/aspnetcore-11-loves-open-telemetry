@@ -384,8 +384,12 @@ $steps = [ordered]@{
             Invoke-Native dotnet @('test', '--project', $project, '--configuration', $Configuration, '--no-build', '--filter-class', 'GrotsPizzeria.EndToEndTests.WeaverReportTests')
         }
         catch {
-            Write-Host '--- docker compose logs tail ---'
-            & docker ($compose + @('logs', '--no-color', '--tail', '150', 'lgtm', 'otelcol')) 2>&1 | Write-Host
+            Write-Host '--- Loki ---'
+            & docker ($compose + @('exec', '-T', 'lgtm', 'sh', '-c', 'curl -s localhost:3100/ready; echo; curl -s localhost:3100/services; df -h /data; curl -s localhost:3100/metrics | grep -E "^(loki_ingester_shutdown_marker|loki_ingester_wal_disk_full_failures_total|lifecycler_read_only)"')) 2>&1 | Write-Host
+            Write-Host '--- docker compose logs (without repeats) ---'
+            & docker ($compose + @('logs', '--no-color', 'lgtm', 'otelcol')) 2>&1 |
+                Where-Object { $_ -notmatch 'Ingester is shutting down|Exporting failed|metrics\.go|engine\.go|table_manager|weaver' } |
+                Select-Object -First 120 | Write-Host
             throw
         }
         finally {
