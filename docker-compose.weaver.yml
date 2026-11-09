@@ -41,7 +41,7 @@ services:
     depends_on: *after-collector
 
   otelcol:
-    image: otel/opentelemetry-collector:0.164.0
+    image: otel/opentelemetry-collector:0.164.0-amd64
     command: ["--config=/etc/otelcol/config.yaml"]
     ports:
       - "4319:4318"
