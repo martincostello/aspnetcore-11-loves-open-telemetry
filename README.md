@@ -3,7 +3,14 @@
 [![Build status](https://github.com/martincostello/aspnetcore-11-loves-open-telemetry/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martincostello/aspnetcore-11-loves-open-telemetry/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
 
 _Grot's Pizzeria_ is a sample application demonstrating ASP.NET Core 11's improved support
-for [OpenTelemetry](https://opentelemetry.io) and HTTP Server Semantic Conventions.
+for [OpenTelemetry](https://opentelemetry.io) and [HTTP Server Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/http/).
+
+This application demonstrates how to use ASP.NET Core 11 with OpenTelemetry to collect and
+export telemetry data, including logs, metrics, and traces, from a multi-service architecture.
+
+It was created as part of my session _ASP.NET Core 11 💖 OpenTelemetry_ for
+[.NET Conf 2026](https://www.dotnetconf.net/). You can find links to the recording and slides
+for the session here: [martincostello/presentations](https://github.com/martincostello/presentations/blob/main/content/dotnet-conf-2026/README.md).
 
 ## Architecture
 
