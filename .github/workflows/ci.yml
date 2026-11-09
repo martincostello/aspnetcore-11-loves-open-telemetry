@@ -141,7 +141,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@v6.1.0
 
       - name: Build
         run: dotnet build GrotsPizzeria.slnx --configuration Release
@@ -367,7 +367,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@v0.8.0
+        uses: zizmorcore/zizmor-action@v0.8.1
 
   validate:
     name: Validate configuration
@@ -425,7 +425,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@v6.1.0
 
       - name: Build
         run: dotnet build tests/GrotsPizzeria.EndToEndTests --configuration Release
@@ -460,7 +460,7 @@ jobs:
           df -h /
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@v6.1.0
 
       - name: Check telemetry
         shell: pwsh
