@@ -505,6 +505,7 @@ jobs:
       go,
       java,
       javascript,
+      markdown,
       node,
       python,
       telemetry,
