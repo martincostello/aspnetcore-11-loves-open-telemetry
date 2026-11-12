@@ -12,7 +12,6 @@
 
     Steps (in the order they run):
 
-      markdown    markdownlint
       javascript  ESLint and Stylelint (the JavaScript and the CSS)
       workflows   actionlint on the GitHub Actions workflows (needs Docker)
       config      the Docker Compose files, the Grafana dashboard and the Weaver registry (needs Docker)
@@ -58,10 +57,10 @@
 #>
 [CmdletBinding()]
 param(
-    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e', 'telemetry' })]
+    [ArgumentCompleter({ 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e', 'telemetry' })]
     [string[]] $Only,
 
-    [ArgumentCompleter({ 'markdown', 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e', 'telemetry' })]
+    [ArgumentCompleter({ 'javascript', 'workflows', 'config', 'docs', 'go', 'python', 'node', 'java', 'dotnet', 'e2e', 'telemetry' })]
     [string[]] $Skip,
 
     [string] $Configuration = 'Release',
@@ -152,11 +151,6 @@ function Get-WorkflowImage {
 }
 
 $steps = [ordered]@{
-
-    markdown   = {
-        Install-Tooling
-        Invoke-Native npm @('run', 'lint:md')
-    }
 
     javascript = {
         Install-Tooling
