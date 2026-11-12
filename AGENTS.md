@@ -33,13 +33,13 @@ Run everything CI runs with the PowerShell 7 script in the repository root (it w
 pwsh ./build.ps1                  # every step; Docker must be running
 pwsh ./build.ps1 -Skip e2e        # everything except the slow end-to-end tests
 pwsh ./build.ps1 -Only go,python  # just some steps
-pwsh ./build.ps1 -List            # the steps: markdown, javascript, workflows, config, docs, go, python, node, java, dotnet, e2e, telemetry
+pwsh ./build.ps1 -List            # the steps: javascript, workflows, config, docs, go, python, node, java, dotnet, e2e, telemetry
 ```
 
 The script's help and the README (Prerequisites) list what each step needs. The toolchain versions are pinned by `global.json`,
 `package.json`, `go.mod`, `pom.xml`, `requirements*.txt` and the Dockerfiles.
 
-Before you finish, run the steps for the code you changed, plus `markdown` if you touched a Markdown file. A change to a
+Before you finish, run the steps for the code you changed (Markdown is linted only in CI, by an action). A change to a
 service, the BFF, the UI or the Compose file also needs `e2e`, and one to the telemetry (what is emitted, the dashboard, the Weaver files)
 also needs `telemetry`. CI treats warnings as errors for .NET (it sets `CI=true`).
 
@@ -50,7 +50,7 @@ disabling rules:
 | --- | --- |
 | JavaScript | ESLint (`npm run lint`) |
 | CSS | Stylelint with its standard config (`npm run lint:css`) |
-| Markdown | markdownlint-cli2 (`npm run lint:md`) |
+| Markdown | markdownlint-cli2 (an action in CI only; there is no local step) |
 | Go | gofmt and golangci-lint v2 |
 | Python | Ruff (`ruff check`) |
 | Java | PMD (quickstart rules) through Maven |

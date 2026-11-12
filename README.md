@@ -361,7 +361,6 @@ pwsh ./build.ps1 -List            # Shows the steps
 
 | Step | What it runs | Needs |
 | --- | --- | --- |
-| `markdown` | markdownlint | Node.js |
 | `javascript` | ESLint and Stylelint | Node.js |
 | `workflows` | actionlint on the GitHub Actions workflows | Docker |
 | `config` | The Compose files, the Grafana dashboard and the Weaver registry | Docker |

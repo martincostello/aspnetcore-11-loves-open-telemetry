@@ -34,6 +34,7 @@ jobs:
       go: ${{ github.event_name != 'pull_request' || steps.filter.outputs.go == 'true' }}
       java: ${{ github.event_name != 'pull_request' || steps.filter.outputs.java == 'true' }}
       javascript: ${{ github.event_name != 'pull_request' || steps.filter.outputs.javascript == 'true' }}
+      markdown: ${{ github.event_name != 'pull_request' || steps.filter.outputs.markdown == 'true' }}
       node: ${{ github.event_name != 'pull_request' || steps.filter.outputs.node == 'true' }}
       python: ${{ github.event_name != 'pull_request' || steps.filter.outputs.python == 'true' }}
       telemetry: ${{ github.event_name != 'pull_request' || steps.filter.outputs.telemetry == 'true' }}
@@ -73,7 +74,6 @@ jobs:
               - services/checkout/**
             javascript:
               - *workflow
-              - .markdownlint-cli2.jsonc
               - eslint.config.mjs
               - package.json
               - package-lock.json
@@ -81,8 +81,11 @@ jobs:
               - '**/*.cjs'
               - '**/*.css'
               - '**/*.js'
-              - '**/*.md'
               - '**/*.mjs'
+            markdown:
+              - *workflow
+              - .markdownlint.json
+              - '**/*.md'
             workflows:
               - .github/actionlint-matcher.json
               - .github/workflows/**
@@ -252,8 +255,26 @@ jobs:
       - name: Lint CSS
         run: npm run lint:css -- --max-warnings 0
 
+  markdown:
+    name: Markdown
+    needs: changes
+    if: needs.changes.outputs.markdown == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Lint Markdown
-        run: npm run lint:md
+        uses: DavidAnson/markdownlint-cli2-action@v25.0.0
+        with:
+          globs: '**/*.md'
 
   node:
     name: Node.js
