@@ -6,9 +6,9 @@
     <li><NavItem Href="cart" Label="Cart" IconName="cart" /></li>
     <li><NavItem Href="orders" Label="My orders" IconName="orders" /></li>
 
+    <li class="nav-divider" aria-hidden="true"></li>
     @if (_telemetryUrl is not null)
     {
-        <li class="nav-divider" aria-hidden="true"></li>
         <li>
             <a class="nav-item" href="@_telemetryUrl" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="See telemetry in @_provider (opens in a new tab)">
                 <Icon Name="telemetry" /><span>See telemetry</span>
@@ -19,9 +19,19 @@
             </a>
         </li>
     }
+    <li>
+        <a class="nav-item" href="@RepositoryUrl" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="View on GitHub (opens in a new tab)">
+            <Icon Name="github" /><span>View on GitHub</span>
+            <span class="nav-trailing" aria-hidden="true">
+                <span class="nav-external"><Icon Name="external" /></span>
+            </span>
+        </a>
+    </li>
 </ul>
 
 @code {
+    private const string RepositoryUrl = "https://github.com/martincostello/aspnetcore-11-loves-open-telemetry";
+
     private string? _telemetryUrl;
     private TelemetryProvider _provider;
 
