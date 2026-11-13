@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @implements IDisposable
 @inject MoneyFormatter Money
+@inject MenuState Menu
 @inject ApiClient Api
 @inject IJSRuntime JS
 @inject TimeProvider Time
@@ -61,7 +62,7 @@ else
                 <tbody>
                     @foreach (var line in _order.Items)
                     {
-                        <tr><td>@line.Quantity × @line.Name</td><td class="num">@Money.Format(line.LineTotal, _order.Currency)</td></tr>
+                        <tr><td>@line.Quantity × <span aria-hidden="true">@EmojiFor(line)</span> @line.Name</td><td class="num">@Money.Format(line.LineTotal, _order.Currency)</td></tr>
                     }
                 </tbody>
                 <tfoot data-testid="totals">
@@ -90,6 +91,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // An order only records the id and name of what was bought, so the emoji come from the menu, as they do in the cart
+        await Menu.LoadAsync();
+
         var result = await Api.GetOrderAsync(Id);
         _order = result.Value;
         _error = result.Problem;
@@ -130,6 +134,8 @@ else
             return false;
         }
     }
+
+    private string EmojiFor(OrderLine line) => Menu.Items?.FirstOrDefault(i => i.Id == line.PizzaId)?.Emoji ?? "";
 
     private string CurrentLabel => _tracking?.Steps.FirstOrDefault(s => s.Status == _tracking.Status)?.Label ?? _tracking?.Status ?? "";
 
